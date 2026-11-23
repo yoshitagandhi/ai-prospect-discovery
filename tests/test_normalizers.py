@@ -2,7 +2,7 @@
 
 import pytest
 
-from app.utils.normalizers import clean_display_name
+from app.utils.normalizers import clean_display_name, content_words
 
 
 @pytest.mark.parametrize(
@@ -28,3 +28,12 @@ def test_names_cleaned_from_titles(title, expected):
 )
 def test_unusable_titles_give_none(title):
     assert clean_display_name(title) is None
+
+
+def test_content_words_handle_plurals_and_small_words():
+    assert content_words("Restaurants in the City of Dubai") == {
+        "restaurant",
+        "city",
+        "dubai",
+    }
+    assert content_words("Chess business owners") == {"chess", "business", "owner"}

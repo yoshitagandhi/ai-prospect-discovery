@@ -10,33 +10,15 @@ Results are cached in memory (ParsedQuery only, never search results) for
 cache_ttl_seconds, keyed on the lower-cased query with spaces collapsed.
 """
 
-import re
-
 from cachetools import TTLCache
 
 from app.config import get_settings
 from app.schemas import ParsedQuery
 from app.services import llm_service
 from app.services.llm_service import LlmError, LlmUsage
+from app.utils.normalizers import content_words
 
 CACHE_SIZE = 256
-WORD_PATTERN = re.compile(r"[^\W_]+")
-STOP_WORDS = {
-    "a",
-    "an",
-    "and",
-    "at",
-    "for",
-    "from",
-    "in",
-    "near",
-    "of",
-    "on",
-    "the",
-    "to",
-    "with",
-}
-
 SYSTEM_PROMPT = """You extract the search intent from a prospect discovery query.
 Return JSON with these fields:
 - is_prospect_query: true only if the query asks to find people or businesses (an
@@ -84,27 +66,12 @@ def _cache_key(query: str) -> str:
     return " ".join(query.lower().split())
 
 
-def _words(text: str) -> set[str]:
-    """Lower-case words with a trailing plural 's' removed ('restaurants' -> 'restaurant').
-
-    Small connecting words such as "in" or "the" are ignored, so they never count as a match.
-    """
-    words = set()
-    for word in WORD_PATTERN.findall(text.lower()):
-        if word in STOP_WORDS:
-            continue
-        if len(word) > 3 and word.endswith("s"):
-            word = word[:-1]
-        words.add(word)
-    return words
-
-
 def interest_matches_query(parsed: ParsedQuery, query: str) -> bool:
     """True when the interest or a related term shares a word with the query."""
     extracted = parsed.interest or ""
     for term in parsed.related_terms:
         extracted += " " + term
-    return bool(_words(extracted) & _words(query))
+    return bool(content_words(extracted) & content_words(query))
 
 
 async def parse_query(query: str) -> tuple[ParsedQuery, LlmUsage | None]:

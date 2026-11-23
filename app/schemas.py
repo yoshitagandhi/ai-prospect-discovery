@@ -218,13 +218,19 @@ class SocialLink(BaseModel):
 
 
 class Prospect(BaseModel):
-    """One discovered person or business."""
+    """One discovered person or business.
+
+    evidence, source_urls and relevance_score are only filled in evidence mode.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
     name: NameText
     location: NameText | None = None
     social_link: list[SocialLink] = Field(min_length=1, max_length=20)
+    evidence: list[str] | None = None
+    source_urls: list[str] | None = None
+    relevance_score: float | None = Field(default=None, ge=0, le=1)
 
     @field_validator("location", mode="before")
     @classmethod

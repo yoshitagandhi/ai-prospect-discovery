@@ -4,6 +4,8 @@ Dash separators are written as escapes (\\u2013 en dash, \\u2014 em dash) so the
 not mistaken for an ordinary hyphen when reading the code.
 """
 
+import re
+
 TITLE_SEPARATORS = (
     " | ",
     " - ",
@@ -53,3 +55,39 @@ def clean_display_name(title: str) -> str | None:
     if not any(char.isalpha() for char in name):
         return None
     return name
+
+
+WORD_PATTERN = re.compile(r"[^\W_]+")
+STOP_WORDS = {
+    "a",
+    "an",
+    "and",
+    "at",
+    "for",
+    "from",
+    "in",
+    "near",
+    "of",
+    "on",
+    "the",
+    "to",
+    "with",
+}
+
+
+def content_words(text: str) -> set[str]:
+    """Lower-case words with a trailing plural 's' removed ('restaurants' -> 'restaurant').
+
+    Words ending in 'ss' keep their ending ('chess', 'business' are not plurals).
+
+    Small connecting words such as "in" or "the" are ignored, so they never count as a
+    match when two texts are compared.
+    """
+    words = set()
+    for word in WORD_PATTERN.findall(text.lower()):
+        if word in STOP_WORDS:
+            continue
+        if len(word) > 3 and word.endswith("s") and not word.endswith("ss"):
+            word = word[:-1]
+        words.add(word)
+    return words
