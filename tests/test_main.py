@@ -127,3 +127,9 @@ def test_missing_required_key_stops_startup(fake_keys, monkeypatch):
     config.get_settings.cache_clear()
     with pytest.raises(ConfigError, match="TAVILY_API_KEY"), TestClient(app):
         pass
+
+
+def test_root_redirects_to_docs(client):
+    response = client.get("/", follow_redirects=False)
+    assert response.status_code == 307
+    assert response.headers["location"] == "/docs"

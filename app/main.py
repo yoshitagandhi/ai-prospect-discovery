@@ -9,7 +9,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware import Middleware
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -138,3 +138,9 @@ async def prospect_discovery(
 async def health() -> dict[str, str]:
     """Liveness check for the hosting platform. Calls no external API."""
     return {"status": "ok"}
+
+
+@app.get("/", include_in_schema=False)
+async def root() -> RedirectResponse:
+    """Send visitors of the bare demo URL to the interactive API docs."""
+    return RedirectResponse(url="/docs")
