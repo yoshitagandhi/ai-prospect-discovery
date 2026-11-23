@@ -17,6 +17,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from app.config import get_settings
 from app.schemas import ErrorResponse, ProspectRequest, ProspectResponse
 from app.services import prospect_service
+from app.services.query_service import QueryNotProspectError, QueryUnderstandingError
 from app.utils.rate_limit import check_rate_limit
 
 MAX_BODY_BYTES = 10_000
@@ -102,10 +103,33 @@ def enforce_rate_limits(request: Request) -> None:
         raise HTTPException(status_code=429, headers={"Retry-After": str(wait_seconds)})
 
 
+async def handle_not_prospect_query(
+    request: Request, exc: QueryNotProspectError
+) -> JSONResponse:
+    """422 when the query does not ask for people or businesses."""
+    return error_response(422, "Query does not describe a prospect search")
+
+
+async def handle_query_understanding_error(
+    request: Request, exc: QueryUnderstandingError
+) -> JSONResponse:
+    """503 when the LLM providers are unavailable or their output failed our checks."""
+    return error_response(
+        503, "Query understanding is temporarily unavailable, please try again later"
+    )
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Load settings at start-up, so a missing required key stops the app immediately."""
+    """Load settings at start-up, so a missing required key stops the app immediately.
+
+    Logging: libraries stay at WARNING so they are quiet; this app's own loggers
+    (prospect_discovery.*) use LOG_LEVEL, so LLM usage lines appear at INFO.
+    """
     settings = get_settings()
+    logging.basicConfig(
+        level=logging.WARNING, format="%(levelname)s:     %(name)s - %(message)s"
+    )
     logger.setLevel(settings.log_level)
     yield
 
@@ -122,6 +146,8 @@ app = FastAPI(
     exception_handlers={
         RequestValidationError: handle_validation_error,
         StarletteHTTPException: handle_http_error,
+        QueryNotProspectError: handle_not_prospect_query,
+        QueryUnderstandingError: handle_query_understanding_error,
         Exception: handle_unexpected_error,
     },
 )
@@ -137,6 +163,7 @@ app = FastAPI(
         413: {"model": ErrorResponse},
         422: {"model": ErrorResponse},
         500: {"model": ErrorResponse},
+        503: {"model": ErrorResponse},
     },
 )
 async def prospect_discovery(
@@ -144,15 +171,14 @@ async def prospect_discovery(
 ) -> ProspectResponse:
     """Discover public prospects for a natural-language query."""
     enforce_rate_limits(request)
-    prospects, warnings = await prospect_service.find_prospects(
-        body.query, include_evidence
-    )
+    result = await prospect_service.find_prospects(body.query, include_evidence)
     return ProspectResponse(
         success=True,
         query=body.query,
-        total_prospects=len(prospects),
-        prospects=prospects,
-        warnings=warnings if include_evidence and warnings else None,
+        total_prospects=len(result.prospects),
+        prospects=result.prospects,
+        warnings=result.warnings if include_evidence and result.warnings else None,
+        parsed_query=result.parsed_query if include_evidence else None,
     )
 
 

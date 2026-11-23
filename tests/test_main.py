@@ -6,10 +6,29 @@ from fastapi.testclient import TestClient
 from app import config
 from app.config import ConfigError
 from app.main import app
-from app.services import prospect_service
+from app.schemas import Location, ParsedQuery
+from app.services import prospect_service, query_service
+from app.services.prospect_service import DiscoveryResult
+from app.services.query_service import QueryNotProspectError, QueryUnderstandingError
 from app.utils.rate_limit import reset_rate_limits
 
 ENDPOINT = "/prospect-discovery"
+
+FAKE_PARSED = ParsedQuery(
+    is_prospect_query=True,
+    interest="Chess",
+    audience="Chess players",
+    location=Location(city="Springfield", country="USA", country_code="US"),
+    target_type="individual",
+)
+
+
+@pytest.fixture(autouse=True)
+def no_real_llm(monkeypatch):
+    async def fake_parse_query(query):
+        return FAKE_PARSED, None
+
+    monkeypatch.setattr(query_service, "parse_query", fake_parse_query)
 
 
 @pytest.fixture
@@ -114,7 +133,7 @@ def test_unexpected_error_returns_generic_500(client, monkeypatch):
 
 def test_warnings_only_shown_with_include_evidence(client, monkeypatch):
     async def find_with_warning(query, include_evidence=False):
-        return [], ["YouTube skipped: no API key"]
+        return DiscoveryResult(warnings=["YouTube skipped: no API key"])
 
     monkeypatch.setattr(prospect_service, "find_prospects", find_with_warning)
     default = client.post(ENDPOINT, json={"query": "chess players"}).json()
@@ -153,3 +172,40 @@ def test_sixth_request_in_a_minute_is_rate_limited(client):
 def test_health_is_never_rate_limited(client):
     for _ in range(20):
         assert client.get("/health").status_code == 200
+
+
+def test_parsed_query_only_shown_with_include_evidence(client):
+    default = client.post(ENDPOINT, json={"query": "chess players"}).json()
+    with_evidence = client.post(
+        ENDPOINT + "?include_evidence=true", json={"query": "chess players"}
+    ).json()
+    assert "parsed_query" not in default
+    assert with_evidence["parsed_query"]["interest"] == "Chess"
+    assert with_evidence["parsed_query"]["location"] == {
+        "city": "Springfield",
+        "country": "USA",
+        "country_code": "US",
+    }
+
+
+def test_non_prospect_query_returns_422(client, monkeypatch):
+    async def not_prospect(query):
+        raise QueryNotProspectError("not a prospect search")
+
+    monkeypatch.setattr(query_service, "parse_query", not_prospect)
+    response = client.post(ENDPOINT, json={"query": "hello how are you"})
+    assert response.status_code == 422
+    assert response.json() == {
+        "success": False,
+        "error": "Query does not describe a prospect search",
+    }
+
+
+def test_llm_unavailable_returns_503(client, monkeypatch):
+    async def unavailable(query):
+        raise QueryUnderstandingError("LLM unavailable")
+
+    monkeypatch.setattr(query_service, "parse_query", unavailable)
+    response = client.post(ENDPOINT, json={"query": "chess players"})
+    assert response.status_code == 503
+    assert response.json()["success"] is False

@@ -125,6 +125,7 @@ def test_default_output_has_only_spec_fields():
 def test_parsed_query_accepts_partial_location_and_ignores_extra_keys():
     parsed = ParsedQuery.model_validate(
         {
+            "is_prospect_query": True,
             "interest": "Chess",
             "audience": "Chess players",
             "location": {"city": "Springfield", "state": "", "country": "USA"},
@@ -142,10 +143,13 @@ def test_parsed_query_accepts_partial_location_and_ignores_extra_keys():
         {"target_type": "robot"},
         {"interest": ""},
         {"related_terms": ["a", "b", "c", "d", "e", "f"]},
+        {"audience": None},
+        {"is_prospect_query": "maybe"},
     ],
 )
 def test_parsed_query_rejects_bad_values(bad_fields):
     data = {
+        "is_prospect_query": True,
         "interest": "Chess",
         "audience": "Chess players",
         "location": {"country": "USA"},
@@ -177,3 +181,11 @@ def test_error_response_is_always_unsuccessful():
 def test_country_code_normalised_or_dropped(given, expected):
     location = Location.model_validate({"city": "Somewhere", "country_code": given})
     assert location.country_code == expected
+
+
+def test_non_prospect_query_may_leave_interest_empty():
+    parsed = ParsedQuery.model_validate(
+        {"is_prospect_query": False, "interest": "", "target_type": "individual"}
+    )
+    assert parsed.interest is None
+    assert parsed.location.city is None

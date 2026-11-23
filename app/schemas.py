@@ -179,11 +179,23 @@ class ParsedQuery(BaseModel):
 
     model_config = ConfigDict(extra="ignore")
 
-    interest: ShortText
-    audience: ShortText
-    location: Location
+    is_prospect_query: bool
+    interest: ShortText | None = None
+    audience: ShortText | None = None
+    location: Location = Field(default_factory=Location)
     target_type: TargetType
     related_terms: list[TermText] = Field(default_factory=list, max_length=5)
+
+    @field_validator("interest", "audience", mode="before")
+    @classmethod
+    def blank_means_missing(cls, value: object) -> object:
+        return _blank_to_none(value)
+
+    @model_validator(mode="after")
+    def prospect_query_needs_interest_and_audience(self) -> "ParsedQuery":
+        if self.is_prospect_query and (not self.interest or not self.audience):
+            raise ValueError("a prospect query needs an interest and an audience")
+        return self
 
 
 class SocialLink(BaseModel):
@@ -233,7 +245,7 @@ class Prospect(BaseModel):
 
 
 class ProspectResponse(BaseModel):
-    """Successful response. warnings is only filled when the caller asks for evidence."""
+    """Successful response. warnings and parsed_query only appear in evidence mode."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -242,6 +254,7 @@ class ProspectResponse(BaseModel):
     total_prospects: int = Field(ge=0)
     prospects: list[Prospect]
     warnings: list[str] | None = None
+    parsed_query: ParsedQuery | None = None
 
     @model_validator(mode="after")
     def total_must_match_prospects(self) -> "ProspectResponse":

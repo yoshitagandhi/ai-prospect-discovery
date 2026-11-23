@@ -40,10 +40,11 @@ class Settings(BaseModel):
         default="gemini-3.1-flash-lite", min_length=1, max_length=100
     )
     llm_fallback_model: str = Field(
-        default="openai/gpt-oss-120b", min_length=1, max_length=100
+        default="openai/gpt-oss-20b", min_length=1, max_length=100
     )
 
     http_timeout_seconds: float = Field(default=10.0, gt=0, le=60)
+    llm_timeout_seconds: float = Field(default=20.0, gt=0, le=60)
     request_deadline_seconds: float = Field(default=45.0, gt=0, le=120)
     max_response_bytes: int = Field(default=1_000_000, ge=10_000, le=5_000_000)
     max_redirects: int = Field(default=3, ge=0, le=5)
