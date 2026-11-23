@@ -7,6 +7,7 @@ from app import config
 from app.config import ConfigError
 from app.main import app
 from app.services import prospect_service
+from app.utils.rate_limit import reset_rate_limits
 
 ENDPOINT = "/prospect-discovery"
 
@@ -23,8 +24,10 @@ def fake_keys(monkeypatch):
 
 @pytest.fixture
 def client(fake_keys):
+    reset_rate_limits()
     with TestClient(app, raise_server_exceptions=False) as test_client:
         yield test_client
+    reset_rate_limits()
 
 
 def test_valid_query_returns_exact_spec_shape(client):
@@ -133,3 +136,20 @@ def test_root_redirects_to_docs(client):
     response = client.get("/", follow_redirects=False)
     assert response.status_code == 307
     assert response.headers["location"] == "/docs"
+
+
+def test_sixth_request_in_a_minute_is_rate_limited(client):
+    for _ in range(5):
+        assert client.post(ENDPOINT, json={"query": "chess players"}).status_code == 200
+    response = client.post(ENDPOINT, json={"query": "chess players"})
+    assert response.status_code == 429
+    assert response.json() == {
+        "success": False,
+        "error": "Too many requests, please try again later",
+    }
+    assert int(response.headers["retry-after"]) > 0
+
+
+def test_health_is_never_rate_limited(client):
+    for _ in range(20):
+        assert client.get("/health").status_code == 200

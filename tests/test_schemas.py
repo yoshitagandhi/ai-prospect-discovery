@@ -5,6 +5,7 @@ from pydantic import ValidationError
 
 from app.schemas import (
     ErrorResponse,
+    Location,
     ParsedQuery,
     Prospect,
     ProspectRequest,
@@ -160,3 +161,19 @@ def test_error_response_is_always_unsuccessful():
         "success": False,
         "error": "Invalid query",
     }
+
+
+@pytest.mark.parametrize(
+    ("given", "expected"),
+    [
+        ("in", "IN"),
+        (" us ", "US"),
+        ("UK", "GB"),
+        ("ZZ", None),
+        ("Narnia", None),
+        (None, None),
+    ],
+)
+def test_country_code_normalised_or_dropped(given, expected):
+    location = Location.model_validate({"city": "Somewhere", "country_code": given})
+    assert location.country_code == expected

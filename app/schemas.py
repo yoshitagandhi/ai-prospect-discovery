@@ -12,6 +12,7 @@ import unicodedata
 from typing import Annotated, Literal
 from urllib.parse import urlsplit
 
+import phonenumbers
 from email_validator import EmailNotValidError, validate_email
 from pydantic import (
     AfterValidator,
@@ -141,18 +142,36 @@ class ProspectRequest(BaseModel):
 
 
 class Location(BaseModel):
-    """City, state and country extracted from the query. Any part may be unknown."""
+    """City, state, country and ISO country code from the query. Any part may be unknown."""
 
     model_config = ConfigDict(extra="ignore")
 
     city: ShortText | None = None
     state: ShortText | None = None
     country: ShortText | None = None
+    country_code: str | None = None
 
     @field_validator("city", "state", "country", mode="before")
     @classmethod
     def blank_means_unknown(cls, value: object) -> object:
         return _blank_to_none(value)
+
+    @field_validator("country_code", mode="before")
+    @classmethod
+    def unknown_country_code_means_none(cls, value: object) -> str | None:
+        """Keep only 2-letter region codes that the phonenumbers library knows.
+
+        "UK" is accepted as "GB" because models often write it. Anything unknown
+        becomes None instead of failing the whole parsed query.
+        """
+        if not isinstance(value, str):
+            return None
+        code = value.strip().upper()
+        if code == "UK":
+            code = "GB"
+        if code in phonenumbers.SUPPORTED_REGIONS:
+            return code
+        return None
 
 
 class ParsedQuery(BaseModel):

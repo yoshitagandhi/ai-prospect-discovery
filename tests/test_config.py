@@ -30,6 +30,7 @@ def test_defaults_applied_when_only_required_keys_set(monkeypatch):
     settings = load_settings(env_file=None)
     assert settings.port == 4000
     assert settings.http_timeout_seconds == 10.0
+    assert settings.global_rate_limit_per_minute == 30
     assert settings.groq_api_key is None
     assert settings.youtube_api_key is None
 

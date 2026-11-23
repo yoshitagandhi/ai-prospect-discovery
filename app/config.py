@@ -53,6 +53,7 @@ class Settings(BaseModel):
     max_prospects: int = Field(default=25, ge=1, le=100)
 
     rate_limit_per_minute: int = Field(default=5, ge=1, le=60)
+    global_rate_limit_per_minute: int = Field(default=30, ge=1, le=600)
     cache_ttl_seconds: int = Field(default=3600, ge=0, le=86_400)
 
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
