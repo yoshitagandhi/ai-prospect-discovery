@@ -132,7 +132,7 @@ async def find_channels(
 ) -> list[YouTubeChannel]:
     """Search for channels matching the query, then fetch their public details."""
     if settings.youtube_api_key is None:
-        raise YouTubeError("YouTube skipped: no API key configured")
+        raise YouTubeError("no API key configured")
 
     cache = _get_cache(settings.cache_ttl_seconds)
     cache_key = (query.lower(), country_code)

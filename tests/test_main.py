@@ -7,7 +7,7 @@ from app import config
 from app.config import ConfigError
 from app.main import app
 from app.schemas import Location, ParsedQuery
-from app.services import prospect_service, query_service
+from app.services import prospect_service, query_service, search_service
 from app.services.prospect_service import DiscoveryResult
 from app.services.query_service import QueryNotProspectError, QueryUnderstandingError
 from app.utils.rate_limit import reset_rate_limits
@@ -28,7 +28,11 @@ def no_real_llm(monkeypatch):
     async def fake_parse_query(query):
         return FAKE_PARSED, None
 
+    async def fake_discover(client, settings, parsed):
+        return search_service.SearchOutcome()
+
     monkeypatch.setattr(query_service, "parse_query", fake_parse_query)
+    monkeypatch.setattr(search_service, "discover", fake_discover)
 
 
 @pytest.fixture

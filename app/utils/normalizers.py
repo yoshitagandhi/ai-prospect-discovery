@@ -1,6 +1,22 @@
-"""Clean-up helpers shared by discovery and deduplication."""
+"""Clean-up helpers shared by discovery and deduplication.
 
-TITLE_SEPARATORS = (" | ", " - ", " – ", " — ", " • ", " · ", " (@", " / ")
+Dash separators are written as escapes (\\u2013 en dash, \\u2014 em dash) so they are
+not mistaken for an ordinary hyphen when reading the code.
+"""
+
+TITLE_SEPARATORS = (
+    " | ",
+    " - ",
+    " \u2013 ",
+    " \u2014 ",
+    " • ",
+    " · ",
+    " (@",
+    " / ",
+    " on X:",
+    " on Threads",
+    " on Instagram",
+)
 GENERIC_NAMES = {
     "facebook",
     "home",
