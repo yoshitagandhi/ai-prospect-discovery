@@ -5,13 +5,16 @@ import asyncio
 import pytest
 
 from app import config
-from app.schemas import Location, ParsedQuery
+from app.platforms.web_search import SearchResult
+from app.schemas import Location, ParsedQuery, SocialLink
 from app.services import (
+    profile_extractor,
     prospect_service,
     query_service,
     relevance_service,
     search_service,
 )
+from app.services.profile_extractor import SiteContacts
 from app.services.relevance_service import RelevanceResult, ScoredCandidate
 from app.services.search_service import Candidate, SearchOutcome
 
@@ -119,3 +122,55 @@ def test_evidence_mode_adds_quotes_sources_and_score():
 )
 def test_location_text(location, expected):
     assert prospect_service.location_text(location) == expected
+
+
+def test_kept_website_becomes_prospect_with_its_contact_links(monkeypatch):
+    hit = SearchResult(
+        title="Bright Bistro | Contact",
+        url="https://brightbistro.example/contact",
+        snippet="Chess cafe in Springfield",
+    )
+    site_candidate = profile_extractor.website_candidate(hit)
+    contact_link = SocialLink(platform="Email", link="mailto:hi@brightbistro.example")
+    requested = []
+
+    async def discover(client, settings, parsed):
+        return SearchOutcome(candidates=[], websites=[hit])
+
+    async def score_candidates(settings, parsed, candidates):
+        return RelevanceResult(
+            kept=[
+                ScoredCandidate(
+                    candidate=candidates[0],
+                    score=0.9,
+                    interest_verified=True,
+                    location_verified=True,
+                    audience_match=True,
+                    specific=False,
+                    quotes=["Chess cafe", "Springfield"],
+                )
+            ]
+        )
+
+    async def extract_contacts(client, settings, candidates, country_code):
+        requested.extend(candidates)
+        return [
+            SiteContacts(
+                candidate=site_candidate,
+                page_url="https://brightbistro.example/contact",
+                links=[contact_link],
+            )
+        ], []
+
+    monkeypatch.setattr(search_service, "discover", discover)
+    monkeypatch.setattr(relevance_service, "score_candidates", score_candidates)
+    monkeypatch.setattr(profile_extractor, "extract_contacts", extract_contacts)
+    result = asyncio.run(
+        prospect_service.find_prospects("chess cafes", include_evidence=True)
+    )
+    assert [c.name for c in requested] == ["Bright Bistro"]
+    prospect = result.prospects[0]
+    assert prospect.name == "Bright Bistro"
+    assert prospect.social_link == [contact_link]
+    assert prospect.source_urls == ["https://brightbistro.example/contact"]
+    assert "Contacts: 1 websites with public contacts" in result.warnings

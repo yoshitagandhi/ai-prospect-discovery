@@ -7,6 +7,8 @@
    (the interest and related terms, or the requested place). For a country-level query
    only, a YouTube channel's own country equal to the query's country code also
    verifies the location (a country is too coarse to prove a city or state).
+   The interest quote must come from the evidence text, not only from the name:
+   a name match alone is never enough.
 3. Keep rule: the interest must be verified, the candidate must be the kind of
    prospect wanted (audience match) and, when the query names a place, the location
    must be verified too. A name match alone is never enough.
@@ -129,12 +131,22 @@ def query_has_location(parsed: ParsedQuery) -> bool:
 
 
 def quote_is_verified(
-    quote: str | None, candidate: Candidate, target_words: set[str]
+    quote: str | None,
+    candidate: Candidate,
+    target_words: set[str],
+    evidence_only: bool = False,
 ) -> bool:
-    """A quote counts only if it appears in the candidate's text and proves the target."""
+    """A quote counts only if it appears in the candidate's text and proves the target.
+
+    With evidence_only=True the quote must appear in the evidence, not just the name.
+    """
     if not quote or not quote.strip():
         return False
-    if _normalise(quote) not in _normalise(_candidate_text(candidate)):
+    if evidence_only:
+        text = candidate.evidence[:MAX_EVIDENCE_CHARS]
+    else:
+        text = _candidate_text(candidate)
+    if _normalise(quote) not in _normalise(text):
         return False
     return bool(content_words(quote) & target_words)
 
@@ -170,7 +182,7 @@ def _from_judgement(
 ) -> ScoredCandidate:
     """Apply our own checks to the LLM's judgement of one candidate."""
     interest_ok = judgement.interest_match and quote_is_verified(
-        judgement.interest_quote, candidate, interest_words(parsed)
+        judgement.interest_quote, candidate, interest_words(parsed), evidence_only=True
     )
     location_ok = (
         judgement.location_match
@@ -205,7 +217,8 @@ def _from_keywords(candidate: Candidate, parsed: ParsedQuery) -> ScoredCandidate
     The matched words are kept as evidence ("keywords: restaurant, dubai").
     """
     words = content_words(_candidate_text(candidate))
-    interest_hits = words & interest_words(parsed)
+    evidence_words = content_words(candidate.evidence[:MAX_EVIDENCE_CHARS])
+    interest_hits = evidence_words & interest_words(parsed)
     location_hits = words & location_words(parsed)
     matched = sorted(interest_hits | location_hits)
     scored = ScoredCandidate(

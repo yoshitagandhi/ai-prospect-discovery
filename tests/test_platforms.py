@@ -9,6 +9,7 @@ from app.platforms import (
     linkedin,
     threads,
     x_platform,
+    youtube,
 )
 from app.schemas import SocialLink
 
@@ -105,3 +106,23 @@ def test_clean_links_pass_the_output_schema(module, url, expected):
 def test_registry_uses_spec_platform_names():
     names = [module.NAME for module in SEARCH_PLATFORMS]
     assert names == ["LinkedIn", "Instagram", "Facebook", "X", "Threads"]
+
+
+@pytest.mark.parametrize(
+    ("url", "expected"),
+    [
+        (
+            "https://www.youtube.com/@BrightBistro",
+            "https://www.youtube.com/@brightbistro",
+        ),
+        (
+            "https://youtube.com/channel/UC" + "a" * 22 + "/videos",
+            "https://www.youtube.com/channel/UC" + "a" * 22,
+        ),
+        ("https://www.youtube.com/watch?v=abc123", None),
+        ("https://www.youtube.com/results?search_query=chess", None),
+        ("https://youtube.com.evil.example/@someone", None),
+    ],
+)
+def test_youtube_channel_links_recognised(url, expected):
+    assert youtube.profile_url(url) == expected

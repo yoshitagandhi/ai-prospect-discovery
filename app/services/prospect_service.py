@@ -1,11 +1,16 @@
 """Prospect discovery pipeline.
 
-Steps: understand the query, discover candidate profiles on every platform, then keep
-only candidates whose relevance is verified, best first. Contact extraction from
-business websites and cross-platform deduplication come next.
+Steps:
+1. Understand the query (LLM + deterministic checks).
+2. Discover candidate profiles on every platform, and business websites for business
+   queries, all at the same time.
+3. Score profiles and websites together; keep only those whose relevance is verified.
+4. Read the kept business websites for public emails, phones, WhatsApp links and the
+   social profiles they link to (each website becomes one prospect).
+5. Build prospects, best first. Cross-platform deduplication comes next.
 
 In evidence mode each prospect also carries its verified quotes, source URLs and
-relevance score, and the warnings list reports what each platform found.
+relevance score, and the warnings list reports what each step found.
 """
 
 from collections import Counter
@@ -16,8 +21,14 @@ from pydantic import BaseModel, Field, ValidationError
 from app.config import get_settings
 from app.platforms.web_search import SearchResult
 from app.schemas import Location, ParsedQuery, Prospect, SocialLink
-from app.services import query_service, relevance_service, search_service
+from app.services import (
+    profile_extractor,
+    query_service,
+    relevance_service,
+    search_service,
+)
 from app.services.llm_service import LlmUsage
+from app.services.profile_extractor import WEBSITE_PLATFORM, website_candidate
 from app.services.relevance_service import ScoredCandidate
 from app.services.search_service import Candidate
 
@@ -43,18 +54,25 @@ def location_text(location: Location) -> str | None:
 
 
 def build_prospect(
-    item: ScoredCandidate, parsed: ParsedQuery, include_evidence: bool
+    item: ScoredCandidate,
+    parsed: ParsedQuery,
+    include_evidence: bool,
+    links: list[SocialLink] | None = None,
+    source_url: str | None = None,
 ) -> Prospect:
-    """Turn a kept candidate into a Prospect. The location is only set when verified."""
+    """Turn a kept candidate into a Prospect. The location is only set when verified.
+
+    Profiles get their own profile link; websites pass in the links found on the site.
+    """
     candidate = item.candidate
+    if links is None:
+        links = [SocialLink(platform=candidate.platform, link=candidate.profile_url)]
     return Prospect(
         name=candidate.name,
         location=location_text(parsed.location) if item.location_verified else None,
-        social_link=[
-            SocialLink(platform=candidate.platform, link=candidate.profile_url)
-        ],
+        social_link=links,
         evidence=item.quotes if include_evidence else None,
-        source_urls=[candidate.source_url] if include_evidence else None,
+        source_urls=[source_url or candidate.source_url] if include_evidence else None,
         relevance_score=item.score if include_evidence else None,
     )
 
@@ -73,32 +91,63 @@ async def find_prospects(query: str, include_evidence: bool = False) -> Discover
 
     async with httpx.AsyncClient() as client:
         outcome = await search_service.discover(client, settings, parsed_query)
-    result.candidates = outcome.candidates
-    result.websites = outcome.websites
-    result.warnings.extend(outcome.warnings)
+        result.candidates = outcome.candidates
+        result.websites = outcome.websites
+        result.warnings.extend(outcome.warnings)
 
-    relevance = await relevance_service.score_candidates(
-        settings, parsed_query, outcome.candidates
-    )
-    result.warnings.extend(relevance.warnings)
-    if relevance.usage is not None:
-        result.llm_usage.append(relevance.usage)
+        site_candidates = [
+            candidate
+            for candidate in map(website_candidate, outcome.websites)
+            if candidate is not None
+        ]
+        relevance = await relevance_service.score_candidates(
+            settings, parsed_query, outcome.candidates + site_candidates
+        )
+        result.warnings.extend(relevance.warnings)
+        if relevance.usage is not None:
+            result.llm_usage.append(relevance.usage)
 
-    for item in relevance.kept[: settings.max_prospects]:
+        kept_sites = [
+            item
+            for item in relevance.kept
+            if item.candidate.platform == WEBSITE_PLATFORM
+        ]
+        sites, site_warnings = await profile_extractor.extract_contacts(
+            client,
+            settings,
+            [item.candidate for item in kept_sites],
+            parsed_query.location.country_code,
+        )
+        result.warnings.extend(site_warnings)
+
+    contacts_by_url = {site.candidate.profile_url: site for site in sites}
+    for item in relevance.kept:
+        if len(result.prospects) >= settings.max_prospects:
+            break
         try:
-            result.prospects.append(
-                build_prospect(item, parsed_query, include_evidence)
-            )
+            if item.candidate.platform == WEBSITE_PLATFORM:
+                site = contacts_by_url.get(item.candidate.profile_url)
+                if site is None:
+                    continue
+                prospect = build_prospect(
+                    item, parsed_query, include_evidence, site.links, site.page_url
+                )
+            else:
+                prospect = build_prospect(item, parsed_query, include_evidence)
         except ValidationError:
             result.warnings.append(
                 f"{item.candidate.platform}: skipped a profile with an invalid link"
             )
+            continue
+        result.prospects.append(prospect)
 
     counts = Counter(candidate.platform for candidate in outcome.candidates)
     for platform, count in sorted(counts.items()):
         result.warnings.append(f"{platform}: {count} candidate profiles found")
     result.warnings.append(f"Websites: {len(outcome.websites)} business sites found")
     result.warnings.append(
-        f"Relevance: {len(relevance.kept)} of {len(outcome.candidates)} candidates kept"
+        f"Relevance: {len(relevance.kept)} of "
+        f"{len(outcome.candidates) + len(site_candidates)} candidates kept"
     )
+    result.warnings.append(f"Contacts: {len(sites)} websites with public contacts")
     return result

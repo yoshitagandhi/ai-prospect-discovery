@@ -222,3 +222,15 @@ def test_keyword_fallback_records_matched_words(monkeypatch):
     fake_llm(monkeypatch, error=LlmError("down"))
     result = run(parsed(**SPRINGFIELD), [JANE])
     assert result.kept[0].quotes == ["keywords: chess, springfield"]
+
+
+def test_name_alone_does_not_prove_the_interest(monkeypatch):
+    named = candidate("Chess Secrets Inc", "Consulting company in Springfield.")
+    fake_llm(monkeypatch, [judgement(0, interest_quote="Chess Secrets")])
+    assert run(parsed(**SPRINGFIELD), [named]).kept == []
+
+
+def test_keyword_fallback_ignores_interest_words_in_the_name(monkeypatch):
+    named = candidate("Chess Secrets Inc", "Consulting company in Springfield.")
+    fake_llm(monkeypatch, error=LlmError("down"))
+    assert run(parsed(**SPRINGFIELD), [named]).kept == []

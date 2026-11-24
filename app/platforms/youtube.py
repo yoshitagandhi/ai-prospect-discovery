@@ -15,6 +15,7 @@ from cachetools import TTLCache
 from pydantic import BaseModel, ConfigDict, ValidationError
 
 from app.config import Settings
+from app.platforms.common import split_platform_url
 
 NAME = "YouTube"
 SEARCH_URL = "https://www.googleapis.com/youtube/v3/search"
@@ -24,6 +25,7 @@ MAX_DESCRIPTION_CHARS = 1_000
 CACHE_SIZE = 128
 CHANNEL_ID_PATTERN = re.compile(r"UC[A-Za-z0-9_-]{22}")
 HANDLE_PATTERN = re.compile(r"@[A-Za-z0-9._-]{3,30}")
+SEARCH_DOMAINS = ("youtube.com",)
 
 
 class YouTubeError(Exception):
@@ -102,6 +104,26 @@ def channel_link(channel_id: str, custom_url: str | None) -> str:
     if custom_url and HANDLE_PATTERN.fullmatch(custom_url):
         return f"https://www.youtube.com/{custom_url.lower()}"
     return f"https://www.youtube.com/channel/{channel_id}"
+
+
+def profile_url(url: str) -> str | None:
+    """Recognise a channel link found on a website: /@handle or /channel/<id>.
+
+    Video, playlist and search links are not channels and give None.
+    """
+    parsed = split_platform_url(url, SEARCH_DOMAINS)
+    if parsed is None:
+        return None
+    segments, _ = parsed
+    if segments and HANDLE_PATTERN.fullmatch(segments[0]):
+        return f"https://www.youtube.com/{segments[0].lower()}"
+    if (
+        len(segments) >= 2
+        and segments[0] == "channel"
+        and CHANNEL_ID_PATTERN.fullmatch(segments[1])
+    ):
+        return f"https://www.youtube.com/channel/{segments[1]}"
+    return None
 
 
 async def _get(
