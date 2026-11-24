@@ -175,3 +175,60 @@ def test_kept_website_becomes_prospect_with_its_contact_links(monkeypatch):
     assert prospect.source_urls == ["https://brightbistro.example/contact"]
     assert "Contacts: 1 websites with public contacts" in result.warnings
     assert "Websites: 1 business sites found, 1 kept by relevance" in result.warnings
+
+
+def test_website_linking_a_kept_profile_is_merged_into_one_prospect(monkeypatch):
+    hit = SearchResult(
+        title="Bright Bistro | Contact",
+        url="https://brightbistro.example/contact",
+        snippet="Chess cafe in Springfield",
+    )
+    profile = Candidate(
+        platform="Instagram",
+        name="Bright Bistro",
+        profile_url="https://www.instagram.com/brightbistro/",
+        evidence="Chess cafe in Springfield",
+        source_url="https://www.instagram.com/brightbistro/",
+        found_via="web_search",
+    )
+    site_candidate = profile_extractor.website_candidate(hit)
+    profile_link = SocialLink(platform="Instagram", link=profile.profile_url)
+    email_link = SocialLink(platform="Email", link="mailto:hi@brightbistro.example")
+
+    async def discover(client, settings, parsed):
+        return SearchOutcome(candidates=[profile], websites=[hit])
+
+    async def score_candidates(settings, parsed, candidates):
+        return RelevanceResult(
+            kept=[
+                ScoredCandidate(
+                    candidate=candidate,
+                    score=0.9,
+                    interest_verified=True,
+                    location_verified=True,
+                    audience_match=True,
+                    specific=True,
+                    quotes=["Chess cafe", "Springfield"],
+                )
+                for candidate in candidates
+            ]
+        )
+
+    async def extract_contacts(client, settings, candidates, country_code):
+        return [
+            SiteContacts(
+                candidate=site_candidate,
+                page_url="https://brightbistro.example/contact",
+                links=[email_link, profile_link],
+            )
+        ], []
+
+    monkeypatch.setattr(search_service, "discover", discover)
+    monkeypatch.setattr(relevance_service, "score_candidates", score_candidates)
+    monkeypatch.setattr(profile_extractor, "extract_contacts", extract_contacts)
+    result = asyncio.run(
+        prospect_service.find_prospects("chess cafes", include_evidence=True)
+    )
+    assert [p.name for p in result.prospects] == ["Bright Bistro"]
+    assert result.prospects[0].social_link == [profile_link, email_link]
+    assert "Duplicates: 1 merged" in result.warnings

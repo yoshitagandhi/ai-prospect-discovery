@@ -7,7 +7,8 @@ Steps:
 3. Score profiles and websites together; keep only those whose relevance is verified.
 4. Read the kept business websites for public emails, phones, WhatsApp links and the
    social profiles they link to (each website becomes one prospect).
-5. Build prospects, best first. Cross-platform deduplication comes next.
+5. Build prospects, best first, and merge the ones that share a link
+   (deduplication_service.py). The prospect cap is applied after merging.
 
 In evidence mode each prospect also carries its verified quotes, source URLs and
 relevance score, and the warnings list reports what each step found.
@@ -22,6 +23,7 @@ from app.config import get_settings
 from app.platforms.web_search import SearchResult
 from app.schemas import Location, ParsedQuery, Prospect, SocialLink
 from app.services import (
+    deduplication_service,
     profile_extractor,
     query_service,
     relevance_service,
@@ -121,9 +123,8 @@ async def find_prospects(query: str, include_evidence: bool = False) -> Discover
         result.warnings.extend(site_warnings)
 
     contacts_by_url = {site.candidate.profile_url: site for site in sites}
+    built: list[Prospect] = []
     for item in relevance.kept:
-        if len(result.prospects) >= settings.max_prospects:
-            break
         try:
             if item.candidate.platform == WEBSITE_PLATFORM:
                 site = contacts_by_url.get(item.candidate.profile_url)
@@ -139,7 +140,9 @@ async def find_prospects(query: str, include_evidence: bool = False) -> Discover
                 f"{item.candidate.platform}: skipped a profile with an invalid link"
             )
             continue
-        result.prospects.append(prospect)
+        built.append(prospect)
+    merged, merged_count = deduplication_service.merge_duplicates(built)
+    result.prospects = merged[: settings.max_prospects]
 
     counts = Counter(candidate.platform for candidate in outcome.candidates)
     for platform, count in sorted(counts.items()):
@@ -153,4 +156,5 @@ async def find_prospects(query: str, include_evidence: bool = False) -> Discover
         f"{len(outcome.candidates) + len(site_candidates)} candidates kept"
     )
     result.warnings.append(f"Contacts: {len(sites)} websites with public contacts")
+    result.warnings.append(f"Duplicates: {merged_count} merged")
     return result
