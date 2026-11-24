@@ -4,7 +4,10 @@ Steps: check the cache, ask the LLM for structured JSON, then run deterministic 
 that do not trust the model:
 - a query the model marks as not being a prospect search is rejected (422 in the API);
 - the extracted interest or related terms must share at least one word with the query,
-  so an injected or invented interest is rejected.
+  so an injected or invented interest is rejected;
+- an audience with a business role (owners, founders, agencies...) always gets
+  target_type "both", even if the model said "individual", so business websites are
+  searched for public contact details.
 
 Results are cached in memory (ParsedQuery only, never search results) for
 cache_ttl_seconds, keyed on the lower-cased query with spaces collapsed.
@@ -19,6 +22,11 @@ from app.services.llm_service import LlmError, LlmUsage
 from app.utils.normalizers import content_words
 
 CACHE_SIZE = 256
+BUSINESS_ROLE_WORDS = content_words(
+    "owner owners founder founders ceo ceos proprietor proprietors director directors "
+    "manager managers agency agencies company companies business businesses "
+    "entrepreneur entrepreneurs"
+)
 SYSTEM_PROMPT = """You extract the search intent from a prospect discovery query.
 Return JSON with these fields:
 - is_prospect_query: true only if the query asks to find people or businesses (an
@@ -74,6 +82,14 @@ def interest_matches_query(parsed: ParsedQuery, query: str) -> bool:
     return bool(content_words(extracted) & content_words(query))
 
 
+def apply_business_role_rule(parsed: ParsedQuery) -> ParsedQuery:
+    """Business roles in the audience mean the person and the business both count."""
+    is_business_role = content_words(parsed.audience or "") & BUSINESS_ROLE_WORDS
+    if parsed.target_type == "individual" and is_business_role:
+        return parsed.model_copy(update={"target_type": "both"})
+    return parsed
+
+
 async def parse_query(query: str) -> tuple[ParsedQuery, LlmUsage | None]:
     """Return the parsed query and the LLM usage (None when served from the cache)."""
     settings = get_settings()
@@ -89,6 +105,7 @@ async def parse_query(query: str) -> tuple[ParsedQuery, LlmUsage | None]:
             )
         except LlmError:
             raise QueryUnderstandingError("LLM unavailable") from None
+        parsed = apply_business_role_rule(parsed)
         if settings.cache_ttl_seconds > 0:
             cache[key] = parsed
 

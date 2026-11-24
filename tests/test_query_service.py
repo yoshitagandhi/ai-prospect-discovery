@@ -109,3 +109,26 @@ def test_connecting_words_alone_do_not_count_as_a_match(monkeypatch):
     fake_llm(monkeypatch, result=parsed(interest="Crypto in the", audience="Investors"))
     with pytest.raises(QueryUnderstandingError):
         asyncio.run(parse_query("chess players in the park"))
+
+
+@pytest.mark.parametrize(
+    ("audience", "model_target_type", "expected"),
+    [
+        ("Restaurant owners", "individual", "both"),
+        ("Startup founders", "individual", "both"),
+        ("Digital marketing agency owners", "individual", "both"),
+        ("Chess players", "individual", "individual"),
+        ("Restaurant owners", "business", "business"),
+    ],
+)
+def test_business_roles_get_target_type_both(
+    monkeypatch, audience, model_target_type, expected
+):
+    fake_llm(
+        monkeypatch,
+        result=parsed(
+            interest="Chess", audience=audience, target_type=model_target_type
+        ),
+    )
+    result, _ = asyncio.run(parse_query("chess " + audience))
+    assert result.target_type == expected
