@@ -174,3 +174,4 @@ def test_kept_website_becomes_prospect_with_its_contact_links(monkeypatch):
     assert prospect.social_link == [contact_link]
     assert prospect.source_urls == ["https://brightbistro.example/contact"]
     assert "Contacts: 1 websites with public contacts" in result.warnings
+    assert "Websites: 1 business sites found, 1 kept by relevance" in result.warnings

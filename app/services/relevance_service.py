@@ -53,6 +53,9 @@ name and evidence text. For every candidate return:
   place, use false and null.
 - audience_match: true only if the candidate is the kind of prospect wanted. When the
   target type is "individual", organisations, media outlets and brands are false.
+  The candidate must be a member of the audience, not a business that sells to,
+  advises, serves or markets to it: a consultancy, supplier or app for restaurant
+  owners is not a restaurant owner.
 - is_specific_person_or_business: true for a specific person, local business or
   organisation; false for news agencies, media outlets, governing bodies, large
   brands, generic topic pages, directories or lists.

@@ -99,6 +99,19 @@ def test_verified_candidate_kept_with_quotes(monkeypatch):
     assert result.usage == USAGE
 
 
+def test_prompt_says_the_candidate_must_be_the_audience(monkeypatch):
+    prompts = []
+
+    async def generate_json(settings, system_prompt, untrusted_text, schema):
+        prompts.append(system_prompt)
+        judgements = RelevanceJudgements.model_validate({"judgements": [judgement(0)]})
+        return judgements, USAGE
+
+    monkeypatch.setattr(llm_service, "generate_json", generate_json)
+    run(parsed(**SPRINGFIELD), [JANE])
+    assert "not a business that sells to" in prompts[0]
+
+
 def test_invented_quote_is_rejected(monkeypatch):
     fake_llm(monkeypatch, [judgement(0, interest_quote="grandmaster chess champion")])
     assert run(parsed(**SPRINGFIELD), [JANE]).kept == []

@@ -19,6 +19,10 @@ from app.utils.normalizers import clean_display_name, content_words
         ("Jane Doe (@janedoe) on Threads", "Jane Doe"),
         ("\u201cJane Doe\u201d - Owner | LinkedIn", "Jane Doe"),
         ("\u200eJane Doe\u200e | LinkedIn", "Jane Doe"),
+        ("BRIGHT BISTRO DUBAI\u2728\U0001f451", "BRIGHT BISTRO DUBAI"),
+        ("\u2764\ufe0f Jane Doe | Instagram", "Jane Doe"),
+        ("Jos\u00e9 Garc\u00eda \U0001f44b\U0001f3fd - Coach", "Jos\u00e9 Garc\u00eda"),
+        ("Bright Bistro\u00ae | Facebook", "Bright Bistro"),
     ],
 )
 def test_names_cleaned_from_titles(title, expected):
@@ -26,7 +30,15 @@ def test_names_cleaned_from_titles(title, expected):
 
 
 @pytest.mark.parametrize(
-    "title", ["", "Instagram", "Log In | Facebook", "12345 - 678", "x" * 150]
+    "title",
+    [
+        "",
+        "Instagram",
+        "Log In | Facebook",
+        "12345 - 678",
+        "x" * 150,
+        "\u2728\U0001f451",
+    ],
 )
 def test_unusable_titles_give_none(title):
     assert clean_display_name(title) is None

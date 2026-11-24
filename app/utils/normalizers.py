@@ -37,6 +37,20 @@ GENERIC_NAMES = {
 }
 MAX_NAME_LENGTH = 100
 EDGE_CHARACTERS = " -|\u2022\u00b7\"'\u201c\u201d\u2018\u2019\u00ab\u00bb"
+REMOVED_CATEGORIES = {"Cf", "So", "Sk"}
+VARIATION_SELECTORS = range(0xFE00, 0xFE10)
+
+
+def _keep_character(char: str) -> bool:
+    """False for invisible formatting marks, emoji and other symbols.
+
+    Unicode categories: Cf = formatting marks (such as direction marks), So = symbols
+    and emoji, Sk = modifiers such as emoji skin tones. Variation selectors pick the
+    emoji style of the character before them. Letters and accents are always kept.
+    """
+    if unicodedata.category(char) in REMOVED_CATEGORIES:
+        return False
+    return ord(char) not in VARIATION_SELECTORS
 
 
 def clean_display_name(title: str) -> str | None:
@@ -45,10 +59,10 @@ def clean_display_name(title: str) -> str | None:
     'Jane Doe - Owner - Agency | LinkedIn' -> 'Jane Doe'
     'Jane Doe (@jane) • Instagram photos and videos' -> 'Jane Doe'
     Generic titles such as 'Login' or 'Instagram' give None.
-    Invisible formatting characters (such as direction marks) are removed and quotes
-    around the name are stripped.
+    Invisible formatting characters, emoji and symbols are removed and quotes around
+    the name are stripped. Letters, accents and the name's case are not changed.
     """
-    name = "".join(char for char in title if unicodedata.category(char) != "Cf")
+    name = "".join(char for char in title if _keep_character(char))
     name = name.strip()
     for separator in TITLE_SEPARATORS:
         name = name.split(separator)[0]

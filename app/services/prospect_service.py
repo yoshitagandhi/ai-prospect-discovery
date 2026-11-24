@@ -144,7 +144,10 @@ async def find_prospects(query: str, include_evidence: bool = False) -> Discover
     counts = Counter(candidate.platform for candidate in outcome.candidates)
     for platform, count in sorted(counts.items()):
         result.warnings.append(f"{platform}: {count} candidate profiles found")
-    result.warnings.append(f"Websites: {len(outcome.websites)} business sites found")
+    result.warnings.append(
+        f"Websites: {len(outcome.websites)} business sites found, "
+        f"{len(kept_sites)} kept by relevance"
+    )
     result.warnings.append(
         f"Relevance: {len(relevance.kept)} of "
         f"{len(outcome.candidates) + len(site_candidates)} candidates kept"

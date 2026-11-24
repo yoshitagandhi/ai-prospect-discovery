@@ -164,6 +164,7 @@ def test_websites_only_searched_for_business_queries(fake_sources):
     ]
     website_call = next(c for c in fake_sources if c.get("include") == ())
     assert "facebook.com" in website_call["exclude"]
+    assert "reddit.com" in website_call["exclude"]
     assert website_call["query"].endswith(" contact")
 
 
