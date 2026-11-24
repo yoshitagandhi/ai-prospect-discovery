@@ -34,10 +34,12 @@ class DiscoveryResult(BaseModel):
 
 
 def location_text(location: Location) -> str | None:
-    """'Washington DC, USA' from the parsed location (city or state, then country)."""
-    parts = [location.city or location.state, location.country]
-    text = ", ".join(part for part in parts if part)
-    return text or None
+    """'Washington, DC, USA' from the parsed city, state and country (missing parts skipped)."""
+    parts: list[str] = []
+    for part in (location.city, location.state, location.country):
+        if part and part not in parts:
+            parts.append(part)
+    return ", ".join(parts) or None
 
 
 def build_prospect(

@@ -122,7 +122,7 @@ def test_location_not_needed_when_query_has_no_place(monkeypatch):
     assert [item.candidate.name for item in result.kept] == ["Sam Lee"]
 
 
-def test_youtube_channel_country_verifies_location(monkeypatch):
+def test_youtube_country_verifies_location_for_country_queries(monkeypatch):
     channel = candidate(
         "Chess With Jane",
         "Weekly chess lessons",
@@ -130,10 +130,30 @@ def test_youtube_channel_country_verifies_location(monkeypatch):
         location_hint="US",
     )
     fake_llm(
-        monkeypatch, [judgement(0, interest_quote="chess lessons", location_quote=None)]
+        monkeypatch,
+        [judgement(0, interest_quote="chess lessons", location_quote=None)],
     )
-    result = run(parsed(**SPRINGFIELD), [channel])
+    result = run(parsed(country="USA", country_code="US"), [channel])
     assert result.kept[0].location_verified
+
+
+def test_youtube_country_does_not_verify_a_city(monkeypatch):
+    channel = candidate(
+        "Chess With Jane",
+        "Weekly chess lessons",
+        platform="YouTube",
+        location_hint="US",
+    )
+    fake_llm(
+        monkeypatch,
+        [judgement(0, interest_quote="chess lessons", location_quote=None)],
+    )
+    assert run(parsed(**SPRINGFIELD), [channel]).kept == []
+
+
+def test_audience_mismatch_is_dropped(monkeypatch):
+    fake_llm(monkeypatch, [judgement(0, audience_match=False)])
+    assert run(parsed(**SPRINGFIELD), [JANE]).kept == []
 
 
 def test_kept_candidates_ranked_by_score(monkeypatch):

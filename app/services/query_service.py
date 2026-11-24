@@ -39,7 +39,8 @@ Return JSON with these fields:
   country_code is the ISO 3166-1 alpha-2 code of that country (for example "US").
 - target_type: "individual" for people, "business" for companies or venues, "both"
   when either fits (for example owners of businesses).
-- related_terms: up to 5 short synonyms or closely related search terms.
+- related_terms: up to 5 short synonyms or narrower terms of the interest (for example
+  "soccer" or "NFL" for football). Never broader categories such as "sports fans".
 Never invent a place, name or detail the query does not contain. Use null for unknown
 fields."""
 

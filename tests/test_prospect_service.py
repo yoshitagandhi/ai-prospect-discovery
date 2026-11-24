@@ -5,7 +5,7 @@ import asyncio
 import pytest
 
 from app import config
-from app.schemas import ParsedQuery
+from app.schemas import Location, ParsedQuery
 from app.services import (
     prospect_service,
     query_service,
@@ -105,3 +105,17 @@ def test_evidence_mode_adds_quotes_sources_and_score():
     assert jane.evidence == ["Chess coach", "Springfield"]
     assert jane.source_urls == ["https://www.linkedin.com/in/jane-doe"]
     assert jane.relevance_score == 1.0
+
+
+@pytest.mark.parametrize(
+    ("location", "expected"),
+    [
+        (Location(city="Washington", state="DC", country="USA"), "Washington, DC, USA"),
+        (Location(city="Dubai", country="UAE"), "Dubai, UAE"),
+        (Location(state="Gujarat", country="India"), "Gujarat, India"),
+        (Location(city="Singapore", country="Singapore"), "Singapore"),
+        (Location(), None),
+    ],
+)
+def test_location_text(location, expected):
+    assert prospect_service.location_text(location) == expected

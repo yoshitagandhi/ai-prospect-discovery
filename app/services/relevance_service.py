@@ -4,10 +4,12 @@
    text cut to MAX_EVIDENCE_CHARS) and returns booleans plus exact quotes.
 2. Deterministic checks never trust the model: a quote counts only if it really appears
    in that candidate's name or evidence AND shares a word with what it should prove
-   (the interest and related terms, or the requested place). For YouTube, a channel
-   country equal to the query's country code also verifies the location.
-3. Keep rule: the interest must be verified and, when the query names a place, the
-   location must be verified too. A name match alone is never enough.
+   (the interest and related terms, or the requested place). For a country-level query
+   only, a YouTube channel's own country equal to the query's country code also
+   verifies the location (a country is too coarse to prove a city or state).
+3. Keep rule: the interest must be verified, the candidate must be the kind of
+   prospect wanted (audience match) and, when the query names a place, the location
+   must be verified too. A name match alone is never enough.
 4. Score (for ranking): 0.4 interest + 0.3 location + 0.2 audience + 0.1 specific
    person or business.
 
@@ -37,11 +39,15 @@ name and evidence text. For every candidate return:
 - interest_match: true only if the name or evidence shows the interest or a close synonym.
 - interest_quote: the exact words from the name or evidence that show it, copied
   character for character; null if there are none.
-- location_match and location_quote: the same for the requested place (city, state or
-  country). If the query has no place, use false and null.
-- audience_match: true if the candidate is the kind of person or business wanted.
-- is_specific_person_or_business: true for a specific person, business or organisation;
-  false for news articles, generic topic pages, directories or lists.
+- location_match and location_quote: true only if the text shows the candidate is
+  based in or active in the requested place (city, state or country). A place that is
+  only mentioned as news, an event or a topic does not count. If the query has no
+  place, use false and null.
+- audience_match: true only if the candidate is the kind of prospect wanted. When the
+  target type is "individual", organisations, media outlets and brands are false.
+- is_specific_person_or_business: true for a specific person, local business or
+  organisation; false for news agencies, media outlets, governing bodies, large
+  brands, generic topic pages, directories or lists.
 Judge only from the given text. Never guess or invent quotes."""
 
 
@@ -123,7 +129,9 @@ def quote_is_verified(
 
 
 def _youtube_country_matches(candidate: Candidate, parsed: ParsedQuery) -> bool:
-    """A YouTube channel's own country equal to the query's country code."""
+    """For country-level queries only: the channel's own country equals the query's."""
+    if parsed.location.city or parsed.location.state:
+        return False
     code = parsed.location.country_code
     return bool(code and candidate.location_hint and candidate.location_hint == code)
 
@@ -140,8 +148,8 @@ def _score(scored: ScoredCandidate) -> float:
 
 
 def _keep(scored: ScoredCandidate, parsed: ParsedQuery) -> bool:
-    """Interest must be verified; location too when the query names a place."""
-    if not scored.interest_verified:
+    """Interest verified, audience matched, and location verified if a place is named."""
+    if not scored.interest_verified or not scored.audience_match:
         return False
     return scored.location_verified or not query_has_location(parsed)
 
@@ -205,6 +213,7 @@ def _llm_payload(parsed: ParsedQuery, candidates: list[Candidate]) -> str:
                 "interest": parsed.interest,
                 "audience": parsed.audience,
                 "related_terms": parsed.related_terms,
+                "target_type": parsed.target_type,
                 "place": {
                     "city": location.city,
                     "state": location.state,
