@@ -32,12 +32,19 @@ HTTP_ERROR_MESSAGES = {
 logger = logging.getLogger("prospect_discovery")
 
 
+class Utf8JSONResponse(JSONResponse):
+    """JSON that states its charset, so clients such as Windows PowerShell decode
+    non-English names correctly instead of guessing Latin-1."""
+
+    media_type = "application/json; charset=utf-8"
+
+
 def error_response(
     status_code: int, message: str, headers: dict[str, str] | None = None
 ) -> JSONResponse:
     """Build a JSON error body in the ErrorResponse shape."""
     body = ErrorResponse(error=message[:300]).model_dump()
-    return JSONResponse(status_code=status_code, content=body, headers=headers)
+    return Utf8JSONResponse(status_code=status_code, content=body, headers=headers)
 
 
 async def limit_body_size(request: Request, call_next):
@@ -141,6 +148,7 @@ app = FastAPI(
         "sources only."
     ),
     version="0.1.0",
+    default_response_class=Utf8JSONResponse,
     lifespan=lifespan,
     middleware=[Middleware(BaseHTTPMiddleware, dispatch=limit_body_size)],
     exception_handlers={

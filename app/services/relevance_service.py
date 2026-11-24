@@ -24,6 +24,7 @@ from app.config import Settings
 from app.schemas import ParsedQuery
 from app.services import llm_service
 from app.services.llm_service import LlmError, LlmUsage
+from app.services.query_service import BUSINESS_ROLE_WORDS
 from app.services.search_service import Candidate
 from app.utils.normalizers import content_words
 
@@ -31,6 +32,11 @@ MAX_CANDIDATES = 40
 MAX_EVIDENCE_CHARS = 400
 MAX_QUOTE_CHARS = 300
 WEIGHTS = {"interest": 0.4, "location": 0.3, "audience": 0.2, "specific": 0.1}
+NON_INTEREST_WORDS = BUSINESS_ROLE_WORDS | content_words(
+    "fan fans lover lovers enthusiast enthusiasts supporter supporters community "
+    "communities people person group groups service services management "
+    "professional professionals member members team teams club clubs"
+)
 
 SYSTEM_PROMPT = """You judge whether search results describe a prospect that matches a query.
 The data contains the query intent and a list of candidates, each with an id, platform,
@@ -100,8 +106,13 @@ def _candidate_text(candidate: Candidate) -> str:
 
 
 def interest_words(parsed: ParsedQuery) -> set[str]:
-    """Words that can prove the interest: the interest itself and related terms."""
-    return content_words(" ".join([parsed.interest or "", *parsed.related_terms]))
+    """Topic words that can prove the interest: from the interest and related terms.
+
+    Role and generic words (owner, fan, service, management...) are removed, because a
+    quote such as "cafe owners" or "sports fans" does not prove the topic.
+    """
+    words = content_words(" ".join([parsed.interest or "", *parsed.related_terms]))
+    return words - NON_INTEREST_WORDS
 
 
 def location_words(parsed: ParsedQuery) -> set[str]:
@@ -189,16 +200,23 @@ def _from_judgement(
 
 
 def _from_keywords(candidate: Candidate, parsed: ParsedQuery) -> ScoredCandidate:
-    """Fallback without an LLM: shared words between the candidate and the query."""
+    """Fallback without an LLM: shared words between the candidate and the query.
+
+    The matched words are kept as evidence ("keywords: restaurant, dubai").
+    """
     words = content_words(_candidate_text(candidate))
+    interest_hits = words & interest_words(parsed)
+    location_hits = words & location_words(parsed)
+    matched = sorted(interest_hits | location_hits)
     scored = ScoredCandidate(
         candidate=candidate,
         score=0.0,
-        interest_verified=bool(words & interest_words(parsed)),
-        location_verified=bool(words & location_words(parsed))
+        interest_verified=bool(interest_hits),
+        location_verified=bool(location_hits)
         or _youtube_country_matches(candidate, parsed),
         audience_match=bool(words & content_words(parsed.audience or "")),
         specific=False,
+        quotes=["keywords: " + ", ".join(matched)] if matched else [],
     )
     scored.score = _score(scored)
     return scored

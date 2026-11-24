@@ -207,3 +207,18 @@ def test_keyword_fallback_when_llm_unavailable(monkeypatch):
 )
 def test_quote_check_ignores_case_and_spacing(quote, expected):
     assert quote_is_verified(quote, JANE, {"chess"}) is expected
+
+
+def test_role_and_generic_words_do_not_prove_the_interest(monkeypatch):
+    owner = candidate("Sam Lee", "Sam Lee, business owner in Springfield.")
+    fake_llm(monkeypatch, [judgement(0, interest_quote="business owner")])
+    query = parsed(**SPRINGFIELD).model_copy(
+        update={"related_terms": ["cafe owners", "food service"]}
+    )
+    assert run(query, [owner]).kept == []
+
+
+def test_keyword_fallback_records_matched_words(monkeypatch):
+    fake_llm(monkeypatch, error=LlmError("down"))
+    result = run(parsed(**SPRINGFIELD), [JANE])
+    assert result.kept[0].quotes == ["keywords: chess, springfield"]

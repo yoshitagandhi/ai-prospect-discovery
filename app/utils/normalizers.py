@@ -5,6 +5,7 @@ not mistaken for an ordinary hyphen when reading the code.
 """
 
 import re
+import unicodedata
 
 TITLE_SEPARATORS = (
     " | ",
@@ -35,6 +36,7 @@ GENERIC_NAMES = {
     "youtube",
 }
 MAX_NAME_LENGTH = 100
+EDGE_CHARACTERS = " -|\u2022\u00b7\"'\u201c\u201d\u2018\u2019\u00ab\u00bb"
 
 
 def clean_display_name(title: str) -> str | None:
@@ -43,11 +45,14 @@ def clean_display_name(title: str) -> str | None:
     'Jane Doe - Owner - Agency | LinkedIn' -> 'Jane Doe'
     'Jane Doe (@jane) • Instagram photos and videos' -> 'Jane Doe'
     Generic titles such as 'Login' or 'Instagram' give None.
+    Invisible formatting characters (such as direction marks) are removed and quotes
+    around the name are stripped.
     """
-    name = title.strip()
+    name = "".join(char for char in title if unicodedata.category(char) != "Cf")
+    name = name.strip()
     for separator in TITLE_SEPARATORS:
         name = name.split(separator)[0]
-    name = " ".join(name.split()).strip(" -|•·")
+    name = " ".join(name.split()).strip(EDGE_CHARACTERS)
     if not name or len(name) > MAX_NAME_LENGTH:
         return None
     if name.lower() in GENERIC_NAMES:

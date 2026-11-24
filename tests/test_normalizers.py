@@ -17,6 +17,8 @@ from app.utils.normalizers import clean_display_name, content_words
         ("  Extra   Spaces  ", "Extra Spaces"),
         ('Jane Doe on X: "Great match tonight" / X', "Jane Doe"),
         ("Jane Doe (@janedoe) on Threads", "Jane Doe"),
+        ("\u201cJane Doe\u201d - Owner | LinkedIn", "Jane Doe"),
+        ("\u200eJane Doe\u200e | LinkedIn", "Jane Doe"),
     ],
 )
 def test_names_cleaned_from_titles(title, expected):

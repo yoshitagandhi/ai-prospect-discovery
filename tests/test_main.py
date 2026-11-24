@@ -213,3 +213,10 @@ def test_llm_unavailable_returns_503(client, monkeypatch):
     response = client.post(ENDPOINT, json={"query": "chess players"})
     assert response.status_code == 503
     assert response.json()["success"] is False
+
+
+def test_json_responses_declare_utf8(client):
+    ok = client.post(ENDPOINT, json={"query": "chess players"})
+    error = client.post(ENDPOINT, json={})
+    assert ok.headers["content-type"] == "application/json; charset=utf-8"
+    assert error.headers["content-type"] == "application/json; charset=utf-8"
