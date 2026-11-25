@@ -65,6 +65,12 @@ name and evidence text. For every candidate return:
   place, use false and null.
 - audience_match: true only if the candidate is the kind of prospect wanted. When the
   target type is "individual", organisations, media outlets and brands are false.
+  For fans, lovers or enthusiasts of something, a person who shows the interest
+  personally counts: they post about it, play it, support a team or belong to a fan
+  club. Teams, leagues, clubs, venues and media are not fans.
+  For founders, owners and other roles, the candidate must hold that role.
+  Communities, events, accelerators, investors and media for founders are not
+  founders.
   When the target type is "business" or "both", a business of the requested kind
   counts (a restaurant counts for "restaurant owners", because its owner is reached
   through it). A business that sells to, advises, serves or markets to the audience

@@ -5,6 +5,7 @@ import logging
 
 import httpx
 import pytest
+from google.genai import errors as genai_errors
 from pydantic import BaseModel, Field
 
 from app.config import Settings
@@ -257,3 +258,65 @@ def test_groq_call_uses_low_reasoning_and_smaller_output_cap(monkeypatch):
     assert reply.text == '{"value": 2}'
     assert captured["reasoning_effort"] == "low"
     assert captured["max_completion_tokens"] == GROQ_MAX_OUTPUT_TOKENS
+
+
+def overloaded():
+    return genai_errors.ServerError(503, {"error": {"code": 503}})
+
+
+def flaky_gemini(errors, calls):
+    """A Gemini stand-in that raises the given errors in order, then answers."""
+    remaining = list(errors)
+
+    async def call(settings, system_prompt, user_text, json_schema, schema_name):
+        calls.append(1)
+        if remaining:
+            raise remaining.pop(0)
+        return ProviderReply(text='{"value": 5}')
+
+    return call
+
+
+@pytest.fixture
+def no_wait(monkeypatch):
+    waits = []
+
+    async def fake_sleep(seconds):
+        waits.append(seconds)
+
+    monkeypatch.setattr(llm_service, "_pause", fake_sleep)
+    return waits
+
+
+def test_gemini_overload_is_retried_once(monkeypatch, no_wait):
+    calls = []
+    monkeypatch.setattr(
+        llm_service, "_call_gemini", flaky_gemini([overloaded()], calls)
+    )
+    result, usage = run(make_settings())
+    assert result.value == 5
+    assert usage.provider == "gemini"
+    assert len(calls) == 2
+    assert no_wait == [llm_service.GEMINI_RETRY_SECONDS]
+
+
+def test_second_overload_falls_back_to_groq(monkeypatch, no_wait):
+    calls = []
+    monkeypatch.setattr(
+        llm_service, "_call_gemini", flaky_gemini([overloaded(), overloaded()], calls)
+    )
+    monkeypatch.setattr(llm_service, "_call_groq", fake_provider('{"value": 3}'))
+    result, usage = run(make_settings())
+    assert len(calls) == 2
+    assert (result.value, usage.provider) == (3, "groq")
+
+
+def test_other_gemini_errors_are_not_retried(monkeypatch, no_wait):
+    calls = []
+    quota = genai_errors.ClientError(429, {"error": {"code": 429}})
+    monkeypatch.setattr(llm_service, "_call_gemini", flaky_gemini([quota], calls))
+    monkeypatch.setattr(llm_service, "_call_groq", fake_provider('{"value": 3}'))
+    result, usage = run(make_settings())
+    assert len(calls) == 1
+    assert no_wait == []
+    assert (result.value, usage.provider) == (3, "groq")

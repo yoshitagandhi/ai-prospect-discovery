@@ -2,8 +2,13 @@
 
 generate_json() sends a system prompt plus untrusted text and asks for JSON that matches
 a Pydantic model. Gemini is tried first; if it errors, times out, or returns JSON that
-fails validation, Groq is tried once (only if a Groq key is configured). There are no
-retries on the same provider, to save free-tier quota: the fallback is the retry.
+fails validation, Groq is tried once (only if a Groq key is configured).
+
+Retries: only one, and only when Gemini answers 503 ("model is overloaded"), which was
+measured to pass on a second try for small requests. It waits GEMINI_RETRY_SECONDS and
+shares the same llm_timeout_seconds budget, so a call can never take longer than the
+timeout. Quota errors (429) and every other error are never retried, to save the free
+tier: the fallback provider is the retry.
 
 Prompt-injection guard: untrusted text is placed between <untrusted_data> tags (any such
 tags inside the text are removed first), the system prompt says that content is data and
@@ -43,6 +48,8 @@ from app.config import Settings
 
 MAX_UNTRUSTED_CHARS = 30_000
 MAX_OUTPUT_TOKENS = 8_192
+GEMINI_RETRY_SECONDS = 2.0
+OVERLOADED_STATUS = 503
 GROQ_MAX_OUTPUT_TOKENS = 3_500
 GROQ_REASONING_MODEL_PREFIX = "openai/gpt-oss"
 SCHEMA_LIMIT_KEYWORDS = {
@@ -170,6 +177,36 @@ async def _call_gemini(
     )
 
 
+async def _pause(seconds: float) -> None:
+    """Wait before a retry. A separate function so tests can skip the wait."""
+    await asyncio.sleep(seconds)
+
+
+async def _call_gemini_with_retry(
+    settings: Settings,
+    system_prompt: str,
+    user_text: str,
+    json_schema: dict,
+    schema_name: str,
+) -> ProviderReply:
+    """Call Gemini, and call it once more if the first answer is 503 (overloaded)."""
+    try:
+        return await _call_gemini(
+            settings, system_prompt, user_text, json_schema, schema_name
+        )
+    except genai_errors.ServerError as error:
+        if error.code != OVERLOADED_STATUS:
+            raise
+        logger.warning(
+            "LLM provider gemini overloaded (503), retrying once in %.0f s",
+            GEMINI_RETRY_SECONDS,
+        )
+    await _pause(GEMINI_RETRY_SECONDS)
+    return await _call_gemini(
+        settings, system_prompt, user_text, json_schema, schema_name
+    )
+
+
 async def _call_groq(
     settings: Settings,
     system_prompt: str,
@@ -224,7 +261,7 @@ def _error_detail(error: Exception, settings: Settings) -> str:
 def _providers(settings: Settings) -> list[tuple[str, str, ProviderCall]]:
     """Providers in the order they are tried. Groq is only used if its key is set."""
     providers: list[tuple[str, str, ProviderCall]] = [
-        ("gemini", settings.llm_primary_model, _call_gemini)
+        ("gemini", settings.llm_primary_model, _call_gemini_with_retry)
     ]
     if settings.groq_api_key is not None:
         providers.append(("groq", settings.llm_fallback_model, _call_groq))

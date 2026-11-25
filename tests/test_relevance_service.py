@@ -114,6 +114,20 @@ def test_prompt_says_the_candidate_must_be_the_audience(monkeypatch):
     assert "sells to, advises, serves or markets to the audience" in prompts[0]
 
 
+def test_prompt_defines_fans_and_roles(monkeypatch):
+    prompts = []
+
+    async def generate_json(settings, system_prompt, untrusted_text, schema):
+        prompts.append(system_prompt)
+        judgements = RelevanceJudgements.model_validate({"judgements": []})
+        return judgements, USAGE
+
+    monkeypatch.setattr(llm_service, "generate_json", generate_json)
+    run(parsed(**SPRINGFIELD), [JANE])
+    assert "belong to a fan" in prompts[0]
+    assert "media for founders are not" in prompts[0]
+
+
 def test_prompt_counts_a_business_of_the_kind_for_business_queries(monkeypatch):
     prompts = []
 

@@ -37,7 +37,7 @@ class Settings(BaseModel):
     youtube_api_key: SecretStr | None = None
 
     llm_primary_model: str = Field(
-        default="gemini-3.1-flash-lite", min_length=1, max_length=100
+        default="gemini-3.5-flash-lite", min_length=1, max_length=100
     )
     llm_fallback_model: str = Field(
         default="openai/gpt-oss-20b", min_length=1, max_length=100
