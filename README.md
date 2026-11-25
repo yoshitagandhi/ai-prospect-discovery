@@ -10,9 +10,6 @@ Every prospect comes with evidence: quotes from public pages that prove the inte
 the location, plus the URL each one came from. Nothing is generated or guessed. Fewer
 correct prospects are returned rather than many weak ones.
 
-Built for the chivoxai practical test
-([spec](https://github.com/chivoxai/practical-test/blob/main/ai-prospect-discovery.md)).
-
 **Live demo:** https://ai-prospect-discovery-pl6l.onrender.com/docs
 (free instance: the first request after 15 idle minutes takes about a minute to wake
 up; limited to 5 requests per minute per visitor and 150 per day in total).
@@ -51,7 +48,7 @@ app/
   platforms/            one module per platform (URL rules), Tavily and YouTube clients
   services/             query, search, relevance, website contacts, dedup, pipeline, LLM
   utils/                SSRF-safe fetching, rate limiting, validators, name clean-up
-scripts/run_test_queries.py   runs the spec's test queries and saves the real responses
+scripts/run_test_queries.py   runs the sample queries and saves the real responses
 samples/                      saved responses, summary and LLM usage log
 tests/                        362 tests, all external APIs replaced (no network, no keys)
 ```
@@ -154,7 +151,8 @@ file in `samples/responses/5-restaurant-owners-in-dubai-uae.json`):
 
 **Evidence mode.** Add `?include_evidence=true` to see, for each prospect, the verified
 `evidence` quotes, `source_urls` and `relevance_score`, plus `warnings` (what each step
-found) and `parsed_query`. The default response follows the spec shape exactly.
+found) and `parsed_query`. The default response contains only `success`, `query`,
+`total_prospects` and `prospects`.
 
 **Errors** always return `{"success": false, "error": "..."}` without stack traces:
 422 (invalid input, or a query that does not ask for people or businesses), 413/411
@@ -196,8 +194,8 @@ Rules that apply to every source:
 | Directories (Yelp, Justdial, Tripadvisor, Clutch and similar) | list many businesses; contacts cannot be tied to one prospect |
 
 
-Test results on the spec's five queries
----------------------------------------
+Test results on five sample queries
+-----------------------------------
 
 `python -m scripts.run_test_queries` runs the queries in `samples/test_queries.txt`
 against the running API and saves each full response in `samples/responses/`, plus
@@ -213,8 +211,8 @@ Final run, 25 Nov 2026 (local, evidence mode):
 | Cricket lovers in Ahmedabad India | 0 | the fallback LLM judged only 4 of 27 candidates and kept none (the response warns about this) |
 | Restaurant owners in Dubai UAE | 6 | all 6 are restaurants or their owners |
 
-The zero results are honest: the spec asks for results "wherever authorized sources
-provide sufficient information", and the service does not pad the list.
+The zero results are honest: when public sources do not give enough evidence, the
+service returns fewer results rather than padding the list.
 
 How the results improved during development (all from real runs, kept in git history):
 the first runs kept news agencies, software vendors and directory pages; fixes added

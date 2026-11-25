@@ -1,4 +1,4 @@
-"""Tavily web search client: the discovery source that fills the spec's "Google" role.
+"""Tavily web search client: the general web search used for discovery.
 
 Google's own Custom Search JSON API is closed to new customers, so an authorised search
 API is used instead. Search results are used within one request only and never cached,

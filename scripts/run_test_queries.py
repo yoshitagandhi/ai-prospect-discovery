@@ -1,4 +1,4 @@
-"""Run the spec's test queries against the running API and save the real responses.
+"""Run the sample queries against the running API and save the real responses.
 
 Usage, with the API already running:
     python -m scripts.run_test_queries

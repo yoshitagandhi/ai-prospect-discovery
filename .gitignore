@@ -16,7 +16,6 @@ htmlcov/
 *.log
 logs/raw/
 
-spec.md
 
 .vscode/
 .idea/

@@ -3,8 +3,8 @@
 Every link that reaches the response passes a per-platform check, so the API can never
 return a malformed link, an unexpected URL scheme or a look-alike domain.
 
-Google is deliberately not an output platform: it is used for discovery only, and the
-spec asks for profiles, not generic search-result URLs.
+Google is deliberately not an output platform: web search is used for discovery only,
+and the API returns profiles, not generic search-result URLs.
 """
 
 import re
@@ -199,7 +199,7 @@ class ParsedQuery(BaseModel):
 
 
 class SocialLink(BaseModel):
-    """One public profile or contact link, using the spec's platform names."""
+    """One public profile or contact link, using the API's platform names."""
 
     model_config = ConfigDict(extra="forbid")
 
