@@ -18,6 +18,7 @@ from app.config import get_settings
 from app.schemas import ErrorResponse, ProspectRequest, ProspectResponse
 from app.services import prospect_service
 from app.services.query_service import QueryNotProspectError, QueryUnderstandingError
+from app.services.relevance_service import RelevanceUnavailableError
 from app.utils.rate_limit import check_rate_limit
 
 MAX_BODY_BYTES = 10_000
@@ -126,6 +127,15 @@ async def handle_query_understanding_error(
     )
 
 
+async def handle_relevance_unavailable(
+    request: Request, exc: RelevanceUnavailableError
+) -> JSONResponse:
+    """503 when no LLM provider could check the candidates (no weak fallback results)."""
+    return error_response(
+        503, "Prospect checking is temporarily unavailable, please try again later"
+    )
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Load settings at start-up, so a missing required key stops the app immediately.
@@ -156,6 +166,7 @@ app = FastAPI(
         StarletteHTTPException: handle_http_error,
         QueryNotProspectError: handle_not_prospect_query,
         QueryUnderstandingError: handle_query_understanding_error,
+        RelevanceUnavailableError: handle_relevance_unavailable,
         Exception: handle_unexpected_error,
     },
 )

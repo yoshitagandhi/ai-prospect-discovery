@@ -10,6 +10,7 @@ from app.schemas import Location, ParsedQuery
 from app.services import prospect_service, query_service, search_service
 from app.services.prospect_service import DiscoveryResult
 from app.services.query_service import QueryNotProspectError, QueryUnderstandingError
+from app.services.relevance_service import RelevanceUnavailableError
 from app.utils.rate_limit import reset_rate_limits
 
 ENDPOINT = "/prospect-discovery"
@@ -220,3 +221,16 @@ def test_json_responses_declare_utf8(client):
     error = client.post(ENDPOINT, json={})
     assert ok.headers["content-type"] == "application/json; charset=utf-8"
     assert error.headers["content-type"] == "application/json; charset=utf-8"
+
+
+def test_relevance_unavailable_returns_503_without_results(client, monkeypatch):
+    async def unavailable(query, include_evidence=False):
+        raise RelevanceUnavailableError("LLM unavailable")
+
+    monkeypatch.setattr(prospect_service, "find_prospects", unavailable)
+    response = client.post(ENDPOINT, json={"query": "chess players"})
+    assert response.status_code == 503
+    assert response.json() == {
+        "success": False,
+        "error": "Prospect checking is temporarily unavailable, please try again later",
+    }

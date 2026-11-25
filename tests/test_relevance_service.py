@@ -13,6 +13,7 @@ from app.services.llm_service import LlmError, LlmUsage
 from app.services.relevance_service import (
     MAX_CANDIDATES,
     RelevanceJudgements,
+    RelevanceUnavailableError,
     quote_is_verified,
     score_candidates,
 )
@@ -241,15 +242,6 @@ def test_no_candidates_means_no_llm_call(monkeypatch):
     assert payloads == []
 
 
-def test_keyword_fallback_when_llm_unavailable(monkeypatch):
-    unrelated = candidate("Bob Ray", "Bob Ray bakes bread in Springfield.")
-    fake_llm(monkeypatch, error=LlmError("down"))
-    result = run(parsed(**SPRINGFIELD), [JANE, unrelated])
-    assert [item.candidate.name for item in result.kept] == ["Jane Doe"]
-    assert result.warnings == ["Relevance: LLM unavailable, keyword matching used"]
-    assert result.usage is None
-
-
 @pytest.mark.parametrize(
     ("quote", "expected"),
     [("CHESS   coach", True), ("chess player", False), ("", False), (None, False)],
@@ -267,19 +259,13 @@ def test_role_and_generic_words_do_not_prove_the_interest(monkeypatch):
     assert run(query, [owner]).kept == []
 
 
-def test_keyword_fallback_records_matched_words(monkeypatch):
-    fake_llm(monkeypatch, error=LlmError("down"))
-    result = run(parsed(**SPRINGFIELD), [JANE])
-    assert result.kept[0].quotes == ["keywords: chess, springfield"]
-
-
 def test_name_alone_does_not_prove_the_interest(monkeypatch):
     named = candidate("Chess Secrets Inc", "Consulting company in Springfield.")
     fake_llm(monkeypatch, [judgement(0, interest_quote="Chess Secrets")])
     assert run(parsed(**SPRINGFIELD), [named]).kept == []
 
 
-def test_keyword_fallback_ignores_interest_words_in_the_name(monkeypatch):
-    named = candidate("Chess Secrets Inc", "Consulting company in Springfield.")
+def test_llm_unavailable_raises_instead_of_guessing(monkeypatch):
     fake_llm(monkeypatch, error=LlmError("down"))
-    assert run(parsed(**SPRINGFIELD), [named]).kept == []
+    with pytest.raises(RelevanceUnavailableError):
+        run(parsed(**SPRINGFIELD), [JANE])

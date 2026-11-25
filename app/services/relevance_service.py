@@ -15,7 +15,9 @@
 4. Score (for ranking): 0.4 interest + 0.3 location + 0.2 audience + 0.1 specific
    person or business.
 
-If the LLM is unavailable, plain keyword matching is used instead and a warning says so.
+If no LLM provider can judge the candidates, RelevanceUnavailableError is raised and
+the API answers 503. There is no keyword fallback: keyword matching let vendors, news
+articles and directories through, and weak results are worse than no results.
 
 Diagnostics: at DEBUG log level (LOG_LEVEL=DEBUG in .env, for local checks only) one
 line per candidate shows what the LLM said, what our code verified and whether the
@@ -39,7 +41,7 @@ from app.utils.normalizers import content_words
 logger = logging.getLogger("prospect_discovery.relevance")
 
 MAX_CANDIDATES = 40
-MAX_EVIDENCE_CHARS = 400
+MAX_EVIDENCE_CHARS = 300
 MAX_QUOTE_CHARS = 300
 WEIGHTS = {"interest": 0.4, "location": 0.3, "audience": 0.2, "specific": 0.1}
 NON_INTEREST_WORDS = BUSINESS_ROLE_WORDS | content_words(
@@ -102,11 +104,14 @@ class ScoredCandidate(BaseModel):
     quotes: list[str] = []
 
 
+class RelevanceUnavailableError(Exception):
+    """No LLM provider could judge the candidates."""
+
+
 class RelevanceResult(BaseModel):
-    """Candidates that passed the keep rule (best first), plus warnings and LLM usage."""
+    """Candidates that passed the keep rule (best first), plus the LLM usage."""
 
     kept: list[ScoredCandidate] = []
-    warnings: list[str] = []
     usage: LlmUsage | None = None
 
 
@@ -236,39 +241,6 @@ def _from_judgement(
     return scored
 
 
-def _from_keywords(candidate: Candidate, parsed: ParsedQuery) -> ScoredCandidate:
-    """Fallback without an LLM: shared words between the candidate and the query.
-
-    The matched words are kept as evidence ("keywords: restaurant, dubai").
-    """
-    words = content_words(_candidate_text(candidate))
-    evidence_words = content_words(candidate.evidence[:MAX_EVIDENCE_CHARS])
-    interest_hits = evidence_words & interest_words(parsed)
-    location_hits = words & location_words(parsed)
-    matched = sorted(interest_hits | location_hits)
-    scored = ScoredCandidate(
-        candidate=candidate,
-        score=0.0,
-        interest_verified=bool(interest_hits),
-        location_verified=bool(location_hits)
-        or _youtube_country_matches(candidate, parsed),
-        audience_match=bool(words & content_words(parsed.audience or "")),
-        specific=False,
-        quotes=["keywords: " + ", ".join(matched)] if matched else [],
-    )
-    scored.score = _score(scored)
-    logger.debug(
-        "Relevance %s %r kept=%s | keywords interest=%s location=%s audience=%s",
-        candidate.platform,
-        candidate.name,
-        _keep(scored, parsed),
-        scored.interest_verified,
-        scored.location_verified,
-        scored.audience_match,
-    )
-    return scored
-
-
 def _llm_payload(parsed: ParsedQuery, candidates: list[Candidate]) -> str:
     """The query intent and candidates as JSON data for the LLM."""
     location = parsed.location
@@ -302,12 +274,14 @@ def _llm_payload(parsed: ParsedQuery, candidates: list[Candidate]) -> str:
 async def score_candidates(
     settings: Settings, parsed: ParsedQuery, candidates: list[Candidate]
 ) -> RelevanceResult:
-    """Judge, verify, filter and rank candidates. No LLM call when there are none."""
+    """Judge, verify, filter and rank candidates. No LLM call when there are none.
+
+    Raises RelevanceUnavailableError when no LLM provider returns valid judgements.
+    """
     candidates = candidates[:MAX_CANDIDATES]
     if not candidates:
         return RelevanceResult()
 
-    result = RelevanceResult()
     try:
         reply, usage = await llm_service.generate_json(
             settings,
@@ -315,23 +289,23 @@ async def score_candidates(
             _llm_payload(parsed, candidates),
             RelevanceJudgements,
         )
-        result.usage = usage
-        judgements: dict[int, CandidateJudgement] = {}
-        for judgement in reply.judgements:
-            judgements.setdefault(judgement.candidate_id, judgement)
-        scored = []
-        for index, candidate in enumerate(candidates):
-            if index in judgements:
-                scored.append(_from_judgement(candidate, judgements[index], parsed))
-            else:
-                logger.debug(
-                    "Relevance %s %r kept=False | no LLM judgement",
-                    candidate.platform,
-                    candidate.name,
-                )
-    except LlmError:
-        result.warnings.append("Relevance: LLM unavailable, keyword matching used")
-        scored = [_from_keywords(candidate, parsed) for candidate in candidates]
+    except LlmError as error:
+        raise RelevanceUnavailableError("no LLM provider could judge") from error
+
+    result = RelevanceResult(usage=usage)
+    judgements: dict[int, CandidateJudgement] = {}
+    for judgement in reply.judgements:
+        judgements.setdefault(judgement.candidate_id, judgement)
+    scored = []
+    for index, candidate in enumerate(candidates):
+        if index in judgements:
+            scored.append(_from_judgement(candidate, judgements[index], parsed))
+        else:
+            logger.debug(
+                "Relevance %s %r kept=False | no LLM judgement",
+                candidate.platform,
+                candidate.name,
+            )
 
     kept = [item for item in scored if _keep(item, parsed)]
     kept.sort(key=lambda item: item.score, reverse=True)

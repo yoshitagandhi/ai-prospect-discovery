@@ -105,7 +105,6 @@ async def find_prospects(query: str, include_evidence: bool = False) -> Discover
         relevance = await relevance_service.score_candidates(
             settings, parsed_query, outcome.candidates + site_candidates
         )
-        result.warnings.extend(relevance.warnings)
         if relevance.usage is not None:
             result.llm_usage.append(relevance.usage)
 

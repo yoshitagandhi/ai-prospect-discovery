@@ -10,6 +10,9 @@ samples/responses/<number>-<slug>.json with the request, the status code, the
 measured duration and the API's own response body. samples/summary.md is then built
 from those records.
 
+Queries are 60 seconds apart because the free Groq tier allows about 8,000 tokens
+per minute and one query can use most of that.
+
 Nothing is invented: every saved value comes from a real response or the clock.
 No API keys are used, because the script only talks to our own API.
 """
@@ -34,7 +37,7 @@ SUMMARY_FILE = ROOT / "samples" / "summary.md"
 DEFAULT_BASE_URL = "http://127.0.0.1:4000"
 ENDPOINT = "/prospect-discovery"
 PARAMS = {"include_evidence": "true"}
-SECONDS_BETWEEN_QUERIES = 15
+SECONDS_BETWEEN_QUERIES = 60
 REQUEST_TIMEOUT_SECONDS = 90
 DEFAULT_RETRY_SECONDS = 60
 MAX_RETRY_SECONDS = 60
