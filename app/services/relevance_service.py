@@ -16,9 +16,15 @@
    person or business.
 
 If the LLM is unavailable, plain keyword matching is used instead and a warning says so.
+
+Diagnostics: at DEBUG log level (LOG_LEVEL=DEBUG in .env, for local checks only) one
+line per candidate shows what the LLM said, what our code verified and whether the
+candidate was kept. Only the platform and public name are logged, never evidence text;
+the name is logged with repr() so a crafted name cannot fake extra log lines.
 """
 
 import json
+import logging
 
 from pydantic import BaseModel, Field
 
@@ -29,6 +35,8 @@ from app.services.llm_service import LlmError, LlmUsage
 from app.services.query_service import BUSINESS_ROLE_WORDS
 from app.services.search_service import Candidate
 from app.utils.normalizers import content_words
+
+logger = logging.getLogger("prospect_discovery.relevance")
 
 MAX_CANDIDATES = 40
 MAX_EVIDENCE_CHARS = 400
@@ -53,9 +61,11 @@ name and evidence text. For every candidate return:
   place, use false and null.
 - audience_match: true only if the candidate is the kind of prospect wanted. When the
   target type is "individual", organisations, media outlets and brands are false.
-  The candidate must be a member of the audience, not a business that sells to,
-  advises, serves or markets to it: a consultancy, supplier or app for restaurant
-  owners is not a restaurant owner.
+  When the target type is "business" or "both", a business of the requested kind
+  counts (a restaurant counts for "restaurant owners", because its owner is reached
+  through it). A business that sells to, advises, serves or markets to the audience
+  does not count: a consultancy, supplier or app for restaurant owners is not a
+  restaurant owner.
 - is_specific_person_or_business: true for a specific person, local business or
   organisation; false for news agencies, media outlets, governing bodies, large
   brands, generic topic pages, directories or lists.
@@ -211,6 +221,18 @@ def _from_judgement(
         quotes=quotes,
     )
     scored.score = _score(scored)
+    logger.debug(
+        "Relevance %s %r kept=%s | LLM interest=%s location=%s audience=%s"
+        " | verified interest=%s location=%s",
+        candidate.platform,
+        candidate.name,
+        _keep(scored, parsed),
+        judgement.interest_match,
+        judgement.location_match,
+        judgement.audience_match,
+        interest_ok,
+        location_ok,
+    )
     return scored
 
 
@@ -235,6 +257,15 @@ def _from_keywords(candidate: Candidate, parsed: ParsedQuery) -> ScoredCandidate
         quotes=["keywords: " + ", ".join(matched)] if matched else [],
     )
     scored.score = _score(scored)
+    logger.debug(
+        "Relevance %s %r kept=%s | keywords interest=%s location=%s audience=%s",
+        candidate.platform,
+        candidate.name,
+        _keep(scored, parsed),
+        scored.interest_verified,
+        scored.location_verified,
+        scored.audience_match,
+    )
     return scored
 
 
@@ -288,11 +319,16 @@ async def score_candidates(
         judgements: dict[int, CandidateJudgement] = {}
         for judgement in reply.judgements:
             judgements.setdefault(judgement.candidate_id, judgement)
-        scored = [
-            _from_judgement(candidate, judgements[index], parsed)
-            for index, candidate in enumerate(candidates)
-            if index in judgements
-        ]
+        scored = []
+        for index, candidate in enumerate(candidates):
+            if index in judgements:
+                scored.append(_from_judgement(candidate, judgements[index], parsed))
+            else:
+                logger.debug(
+                    "Relevance %s %r kept=False | no LLM judgement",
+                    candidate.platform,
+                    candidate.name,
+                )
     except LlmError:
         result.warnings.append("Relevance: LLM unavailable, keyword matching used")
         scored = [_from_keywords(candidate, parsed) for candidate in candidates]

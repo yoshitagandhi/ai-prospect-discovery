@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import logging
 
 import pytest
 
@@ -109,7 +110,42 @@ def test_prompt_says_the_candidate_must_be_the_audience(monkeypatch):
 
     monkeypatch.setattr(llm_service, "generate_json", generate_json)
     run(parsed(**SPRINGFIELD), [JANE])
-    assert "not a business that sells to" in prompts[0]
+    assert "sells to, advises, serves or markets to the audience" in prompts[0]
+
+
+def test_prompt_counts_a_business_of_the_kind_for_business_queries(monkeypatch):
+    prompts = []
+
+    async def generate_json(settings, system_prompt, untrusted_text, schema):
+        prompts.append(system_prompt)
+        judgements = RelevanceJudgements.model_validate({"judgements": []})
+        return judgements, USAGE
+
+    monkeypatch.setattr(llm_service, "generate_json", generate_json)
+    run(parsed(**SPRINGFIELD), [JANE])
+    assert "a business of the requested kind" in prompts[0]
+    assert "counts" in prompts[0]
+
+
+def test_debug_log_explains_each_decision(monkeypatch, caplog):
+    fake_llm(monkeypatch, [judgement(0, audience_match=False)])
+    sam = candidate("Sam Lee", "Sam Lee is a chess coach in Springfield.")
+    with caplog.at_level(logging.DEBUG, logger="prospect_discovery.relevance"):
+        run(parsed(**SPRINGFIELD), [JANE, sam])
+    lines = [record.getMessage() for record in caplog.records]
+    assert len(lines) == 2
+    assert lines[0].startswith("Relevance LinkedIn 'Jane Doe' kept=False")
+    assert "audience=False" in lines[0]
+    assert "verified interest=True location=True" in lines[0]
+    assert lines[1] == "Relevance LinkedIn 'Sam Lee' kept=False | no LLM judgement"
+    assert all("Springfield, Illinois" not in line for line in lines)
+
+
+def test_debug_log_off_at_default_level(monkeypatch, caplog):
+    fake_llm(monkeypatch, [judgement(0)])
+    with caplog.at_level(logging.INFO, logger="prospect_discovery.relevance"):
+        run(parsed(**SPRINGFIELD), [JANE])
+    assert caplog.records == []
 
 
 def test_invented_quote_is_rejected(monkeypatch):
