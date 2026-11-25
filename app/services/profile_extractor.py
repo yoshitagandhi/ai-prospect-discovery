@@ -11,6 +11,11 @@ request and MAX_CONCURRENT_FETCHES at a time. For each one:
 
 A site that is blocked, unsafe, too large or failing is skipped with a warning; a site
 with no valid contact or profile link is skipped too. Values are never guessed.
+
+A page that links more than one profile on the same platform (for example two
+LinkedIn profiles) is treated as a list or event page and skipped: its links cannot
+be trusted to belong to one prospect. A real business that links both a personal and
+a company profile is skipped too; that is the safer mistake.
 """
 
 import asyncio
@@ -42,6 +47,7 @@ MAX_CONCURRENT_FETCHES = 5
 MAX_LINKS = 20
 PROFILE_MODULES = (*SEARCH_PLATFORMS, youtube)
 HIDDEN_TAGS = ("script", "style", "noscript", "template")
+DIRECT_CONTACT_PLATFORMS = {"Email", "Phone", "WhatsApp"}
 
 
 class SiteContacts(BaseModel):
@@ -120,6 +126,14 @@ def parse_contacts(
     return links[:MAX_LINKS]
 
 
+def looks_like_list_page(links: list[SocialLink]) -> bool:
+    """True if the page links more than one profile on the same social platform."""
+    platforms = [
+        link.platform for link in links if link.platform not in DIRECT_CONTACT_PLATFORMS
+    ]
+    return len(platforms) != len(set(platforms))
+
+
 async def _read_site(
     client: httpx.AsyncClient,
     settings: Settings,
@@ -163,8 +177,12 @@ async def extract_contacts(
             warnings.append(f"Website {host} skipped: {result}")
         elif isinstance(result, BaseException):
             raise result
-        elif result.links:
-            sites.append(result)
-        else:
+        elif not result.links:
             warnings.append(f"Website {host}: no public contact details found")
+        elif looks_like_list_page(result.links):
+            warnings.append(
+                f"Website {host} skipped: links several profiles on one platform"
+            )
+        else:
+            sites.append(result)
     return sites, warnings

@@ -10,10 +10,12 @@
    The interest quote must come from the evidence text, not only from the name:
    a name match alone is never enough.
 3. Keep rule: the interest must be verified, the candidate must be the kind of
-   prospect wanted (audience match) and, when the query names a place, the location
-   must be verified too. A name match alone is never enough.
-4. Score (for ranking): 0.4 interest + 0.3 location + 0.2 audience + 0.1 specific
-   person or business.
+   prospect wanted (audience match), it must be a specific person or business (not a
+   list, directory, media outlet or large brand) and, when the query names a place,
+   the location must be verified too. A name match alone is never enough.
+4. Score: 0.4 interest + 0.3 location + 0.2 audience + 0.1 specific person or
+   business. Because the keep rule already requires interest, audience and specific,
+   kept candidates score 1.0 with a verified place and 0.7 when the query names none.
 
 If no LLM provider can judge the candidates, RelevanceUnavailableError is raised and
 the API answers 503. There is no keyword fallback: keyword matching let vendors, news
@@ -189,8 +191,8 @@ def _score(scored: ScoredCandidate) -> float:
 
 
 def _keep(scored: ScoredCandidate, parsed: ParsedQuery) -> bool:
-    """Interest verified, audience matched, and location verified if a place is named."""
-    if not scored.interest_verified or not scored.audience_match:
+    """Interest verified, audience matched, specific, and location verified if needed."""
+    if not (scored.interest_verified and scored.audience_match and scored.specific):
         return False
     return scored.location_verified or not query_has_location(parsed)
 

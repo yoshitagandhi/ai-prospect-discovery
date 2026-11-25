@@ -7,9 +7,11 @@ import pytest
 
 from app.config import Settings
 from app.platforms.web_search import SearchResult
+from app.schemas import SocialLink
 from app.services import profile_extractor
 from app.services.profile_extractor import (
     extract_contacts,
+    looks_like_list_page,
     parse_contacts,
     website_candidate,
 )
@@ -107,6 +109,11 @@ def fake_web(monkeypatch):
     pages = {
         "https://good.example/contact": '<a href="mailto:hi@good.example">mail</a>',
         "https://empty.example/": "<p>No contact details here</p>",
+        "https://list.example/": (
+            '<a href="https://www.linkedin.com/in/jane-doe">Jane</a>'
+            '<a href="https://www.linkedin.com/company/other-firm">Firm</a>'
+            '<a href="mailto:events@list.example">mail</a>'
+        ),
     }
 
     async def robots(client, url, settings):
@@ -184,3 +191,23 @@ def test_unexpected_errors_are_not_hidden(fake_web):
 
 def test_semaphore_limit_is_small():
     assert profile_extractor.MAX_CONCURRENT_FETCHES <= 5
+
+
+def test_list_pages_are_skipped(fake_web):
+    sites, warnings = run_extract(["https://list.example/"])
+    assert sites == []
+    assert warnings == [
+        "Website list.example skipped: links several profiles on one platform"
+    ]
+
+
+def test_one_profile_per_platform_plus_contacts_is_not_a_list():
+    links = [
+        SocialLink(platform="Email", link="mailto:hi@good.example"),
+        SocialLink(platform="Email", link="mailto:sales@good.example"),
+        SocialLink(platform="LinkedIn", link="https://www.linkedin.com/company/good"),
+        SocialLink(platform="X", link="https://x.com/good"),
+    ]
+    assert looks_like_list_page(links) is False
+    second = SocialLink(platform="X", link="https://x.com/other")
+    assert looks_like_list_page([*links, second]) is True

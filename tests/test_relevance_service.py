@@ -206,23 +206,25 @@ def test_audience_mismatch_is_dropped(monkeypatch):
     assert run(parsed(**SPRINGFIELD), [JANE]).kept == []
 
 
-def test_kept_candidates_ranked_by_score(monkeypatch):
-    club = candidate("Chess Club News", "Chess club news from Springfield.")
+def test_lists_media_and_brands_are_dropped(monkeypatch):
+    listing = candidate("Top 25 Chess Coaches", "Chess coaches in Springfield.")
     fake_llm(
         monkeypatch,
         [
             judgement(
-                0, interest_quote="Chess club", is_specific_person_or_business=False
+                0, interest_quote="Chess coaches", is_specific_person_or_business=False
             ),
             judgement(1),
         ],
     )
-    result = run(parsed(**SPRINGFIELD), [club, JANE])
-    assert [item.candidate.name for item in result.kept] == [
-        "Jane Doe",
-        "Chess Club News",
-    ]
-    assert result.kept[1].score == 0.9
+    result = run(parsed(**SPRINGFIELD), [listing, JANE])
+    assert [item.candidate.name for item in result.kept] == ["Jane Doe"]
+    assert result.kept[0].score == 1.0
+
+
+def test_score_is_lower_when_the_query_names_no_place(monkeypatch):
+    fake_llm(monkeypatch, [judgement(0, location_match=False, location_quote=None)])
+    assert run(parsed(), [JANE]).kept[0].score == 0.7
 
 
 def test_candidate_without_judgement_is_dropped(monkeypatch):
