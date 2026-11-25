@@ -173,7 +173,9 @@ def run_all(
         record = run_query(client, base_url, query, sleep)
         path = responses_dir / f"{number}-{slugify(query)}.json"
         path.write_text(
-            json.dumps(record, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+            json.dumps(record, indent=2, ensure_ascii=False) + "\n",
+            encoding="utf-8",
+            newline="\n",
         )
         response = record["response"]
         total = (
@@ -203,7 +205,7 @@ def main(argv: list[str] | None = None) -> int:
         records = run_all(client, base_url, queries, RESPONSES_DIR)
     run_at = datetime.now(UTC).isoformat(timespec="seconds")
     SUMMARY_FILE.write_text(
-        summary_markdown(records, base_url, run_at), encoding="utf-8"
+        summary_markdown(records, base_url, run_at), encoding="utf-8", newline="\n"
     )
     print(f"Saved {len(records)} responses and {SUMMARY_FILE.name}")
     return 0 if all(record["status_code"] == 200 for record in records) else 1

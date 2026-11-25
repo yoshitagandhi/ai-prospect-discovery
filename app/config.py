@@ -58,7 +58,6 @@ class Settings(BaseModel):
     cache_ttl_seconds: int = Field(default=3600, ge=0, le=86_400)
 
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
-    port: int = Field(default=4000, ge=1, le=65_535)
 
 
 def _env_name(field_name: str) -> str:

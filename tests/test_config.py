@@ -28,7 +28,7 @@ def set_required_keys(monkeypatch):
 def test_defaults_applied_when_only_required_keys_set(monkeypatch):
     set_required_keys(monkeypatch)
     settings = load_settings(env_file=None)
-    assert settings.port == 4000
+    assert settings.max_prospects == 25
     assert settings.http_timeout_seconds == 10.0
     assert settings.global_rate_limit_per_minute == 30
     assert settings.llm_timeout_seconds == 20.0
@@ -88,7 +88,7 @@ def test_settings_are_frozen(monkeypatch):
     set_required_keys(monkeypatch)
     settings = load_settings(env_file=None)
     with pytest.raises(ValidationError):
-        settings.port = 1
+        settings.max_prospects = 1
 
 
 def test_get_settings_returns_same_object(monkeypatch):
