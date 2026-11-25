@@ -1,0 +1,20 @@
+INFO LLM call provider=gemini model=gemini-3.5-flash-lite input_tokens=334 output_tokens=106 latency_ms=5422
+INFO LLM call provider=gemini model=gemini-3.5-flash-lite input_tokens=3101 output_tokens=1978 latency_ms=5629
+INFO LLM call provider=gemini model=gemini-3.5-flash-lite input_tokens=335 output_tokens=116 latency_ms=3760
+WARNING LLM provider gemini overloaded (503), retrying once in 2 s
+WARNING LLM provider gemini failed with ServerError: 503 UNAVAILABLE. {'error': {'code': 503, 'message': 'This model is currently 
+INFO LLM call provider=groq model=openai/gpt-oss-20b input_tokens=4841 output_tokens=1760 latency_ms=3593
+WARNING LLM provider gemini overloaded (503), retrying once in 2 s
+INFO LLM call provider=gemini model=gemini-3.5-flash-lite input_tokens=332 output_tokens=121 latency_ms=6230
+WARNING LLM provider gemini overloaded (503), retrying once in 2 s
+WARNING LLM provider gemini failed with ServerError: 503 UNAVAILABLE. {'error': {'code': 503, 'message': 'This model is currently 
+INFO LLM call provider=groq model=openai/gpt-oss-20b input_tokens=4661 output_tokens=1546 latency_ms=2754
+WARNING LLM provider gemini overloaded (503), retrying once in 2 s
+INFO LLM call provider=gemini model=gemini-3.5-flash-lite input_tokens=332 output_tokens=127 latency_ms=5800
+WARNING LLM provider gemini overloaded (503), retrying once in 2 s
+WARNING LLM provider gemini failed with ServerError: 503 UNAVAILABLE. {'error': {'code': 503, 'message': 'This model is currently 
+INFO LLM call provider=groq model=openai/gpt-oss-20b input_tokens=2764 output_tokens=307 latency_ms=1362
+INFO LLM call provider=gemini model=gemini-3.5-flash-lite input_tokens=332 output_tokens=120 latency_ms=11005
+WARNING LLM provider gemini overloaded (503), retrying once in 2 s
+WARNING LLM provider gemini failed with ServerError: 503 UNAVAILABLE. {'error': {'code': 503, 'message': 'This model is currently 
+INFO LLM call provider=groq model=openai/gpt-oss-20b input_tokens=3882 output_tokens=655 latency_ms=2048

@@ -134,7 +134,8 @@ def platform_counts(record: dict) -> str:
 def summary_markdown(records: list[dict], base_url: str, run_at: str) -> str:
     """A markdown table with one row per query, built only from the saved records."""
     lines = [
-        "# Test query results",
+        "Test query results",
+        "==================",
         "",
         f"Run at {run_at} (UTC) against {base_url}{ENDPOINT}?include_evidence=true",
         "",

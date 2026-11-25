@@ -1,0 +1,159 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "http://127.0.0.1:4000/prospect-discovery?include_evidence=true",
+    "body": {
+      "query": "Restaurant owners in Dubai UAE"
+    }
+  },
+  "status_code": 200,
+  "duration_seconds": 29.85,
+  "response": {
+    "success": true,
+    "query": "Restaurant owners in Dubai UAE",
+    "total_prospects": 6,
+    "prospects": [
+      {
+        "name": "Shahbaz Shahid Khan",
+        "location": "Dubai, UAE",
+        "social_link": [
+          {
+            "platform": "LinkedIn",
+            "link": "https://www.linkedin.com/in/shahbaz-shahid-khan-4b10a6a0"
+          }
+        ],
+        "evidence": [
+          "Owner of Restaurant Chains",
+          "Dubai, United Arab Emirates"
+        ],
+        "source_urls": [
+          "https://ae.linkedin.com/in/shahbaz-shahid-khan-4b10a6a0"
+        ],
+        "relevance_score": 1.0
+      },
+      {
+        "name": "Akbar Ali Shah",
+        "location": "Dubai, UAE",
+        "social_link": [
+          {
+            "platform": "X",
+            "link": "https://x.com/akbaralishah"
+          }
+        ],
+        "evidence": [
+          "restaurant",
+          "Dubai"
+        ],
+        "source_urls": [
+          "https://x.com/akbaralishah/status/1807995853841260923"
+        ],
+        "relevance_score": 1.0
+      },
+      {
+        "name": "KARAIKUDI CHETTINADU RESTAURANT DUBAI",
+        "location": "Dubai, UAE",
+        "social_link": [
+          {
+            "platform": "X",
+            "link": "https://x.com/kcr_dubai"
+          }
+        ],
+        "evidence": [
+          "Chettinad_Restaurant",
+          "DUBAI"
+        ],
+        "source_urls": [
+          "https://x.com/kcr_dubai?lang=en"
+        ],
+        "relevance_score": 1.0
+      },
+      {
+        "name": "Nila Restaurant uae",
+        "location": "Dubai, UAE",
+        "social_link": [
+          {
+            "platform": "X",
+            "link": "https://x.com/nilauae"
+          }
+        ],
+        "evidence": [
+          "Nila Restaurant uae",
+          "Dubai, United Arab Emirates"
+        ],
+        "source_urls": [
+          "https://x.com/NilaUae"
+        ],
+        "relevance_score": 1.0
+      },
+      {
+        "name": "BHATKAL RESTAURANT",
+        "location": "Dubai, UAE",
+        "social_link": [
+          {
+            "platform": "Email",
+            "link": "mailto:hello@haiuae.com"
+          },
+          {
+            "platform": "Phone",
+            "link": "tel:+97142267545"
+          }
+        ],
+        "evidence": [
+          "BHATKAL RESTAURANT",
+          "Dubai, UAE"
+        ],
+        "source_urls": [
+          "https://www.haiuae.com/company/bhatkal-restaurant-p-o-pobox-5330-dubai-uae"
+        ],
+        "relevance_score": 1.0
+      },
+      {
+        "name": "Juan Restaurant UAE",
+        "location": "Dubai, UAE",
+        "social_link": [
+          {
+            "platform": "Phone",
+            "link": "tel:+971559959579"
+          }
+        ],
+        "evidence": [
+          "Juan Restaurant UAE",
+          "Dubai, United Arab Emirates"
+        ],
+        "source_urls": [
+          "https://bestthings.ae/dubai/juan-restaurant-uae/126669"
+        ],
+        "relevance_score": 1.0
+      }
+    ],
+    "warnings": [
+      "Relevance: LLM judged only 9 of 31 candidates",
+      "Website www.findglocal.com skipped: HTTP status 403",
+      "Website dubaitravelator.com skipped: looks like a list of several businesses",
+      "LinkedIn: 1 candidate profiles found",
+      "X: 10 candidate profiles found",
+      "YouTube: 10 candidate profiles found",
+      "Websites: 10 business sites found, 4 kept by relevance",
+      "Relevance: 8 of 31 candidates kept",
+      "Contacts: 2 websites with public contacts",
+      "Duplicates: 0 merged"
+    ],
+    "parsed_query": {
+      "is_prospect_query": true,
+      "interest": "Restaurant",
+      "audience": "Restaurant owners",
+      "location": {
+        "city": "Dubai",
+        "country": "UAE",
+        "country_code": "AE"
+      },
+      "target_type": "both",
+      "related_terms": [
+        "cafes",
+        "diners",
+        "eateries",
+        "food service"
+      ]
+    }
+  }
+}

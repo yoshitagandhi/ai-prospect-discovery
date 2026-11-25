@@ -1,0 +1,79 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "http://127.0.0.1:4000/prospect-discovery?include_evidence=true",
+    "body": {
+      "query": "Football lovers in Washington DC in USA"
+    }
+  },
+  "status_code": 200,
+  "duration_seconds": 12.6,
+  "response": {
+    "success": true,
+    "query": "Football lovers in Washington DC in USA",
+    "total_prospects": 2,
+    "prospects": [
+      {
+        "name": "James Galbally",
+        "location": "Washington DC, USA",
+        "social_link": [
+          {
+            "platform": "LinkedIn",
+            "link": "https://www.linkedin.com/in/james-galbally-815038380"
+          }
+        ],
+        "evidence": [
+          "Football",
+          "Washington DC"
+        ],
+        "source_urls": [
+          "https://www.linkedin.com/in/james-galbally-815038380"
+        ],
+        "relevance_score": 1.0
+      },
+      {
+        "name": "THA COMMAND POST",
+        "location": "Washington DC, USA",
+        "social_link": [
+          {
+            "platform": "YouTube",
+            "link": "https://www.youtube.com/@thacommandpost"
+          }
+        ],
+        "evidence": [
+          "football",
+          "DC"
+        ],
+        "source_urls": [
+          "https://www.youtube.com/@thacommandpost"
+        ],
+        "relevance_score": 1.0
+      }
+    ],
+    "warnings": [
+      "Instagram: 1 candidate profiles found",
+      "LinkedIn: 4 candidate profiles found",
+      "X: 10 candidate profiles found",
+      "YouTube: 10 candidate profiles found",
+      "Websites: 0 business sites found, 0 kept by relevance",
+      "Relevance: 2 of 25 candidates kept",
+      "Contacts: 0 websites with public contacts",
+      "Duplicates: 0 merged"
+    ],
+    "parsed_query": {
+      "is_prospect_query": true,
+      "interest": "Football",
+      "audience": "football lovers",
+      "location": {
+        "city": "Washington DC",
+        "country": "USA",
+        "country_code": "US"
+      },
+      "target_type": "individual",
+      "related_terms": [
+        "soccer",
+        "NFL"
+      ]
+    }
+  }
+}

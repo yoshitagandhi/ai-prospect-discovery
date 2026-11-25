@@ -1,0 +1,46 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "http://127.0.0.1:4000/prospect-discovery?include_evidence=true",
+    "body": {
+      "query": "Startup founders in London UK"
+    }
+  },
+  "status_code": 200,
+  "duration_seconds": 18.62,
+  "response": {
+    "success": true,
+    "query": "Startup founders in London UK",
+    "total_prospects": 0,
+    "prospects": [],
+    "warnings": [
+      "Relevance: LLM judged only 38 of 39 candidates",
+      "Instagram: 3 candidate profiles found",
+      "LinkedIn: 4 candidate profiles found",
+      "Threads: 2 candidate profiles found",
+      "X: 10 candidate profiles found",
+      "YouTube: 10 candidate profiles found",
+      "Websites: 10 business sites found, 0 kept by relevance",
+      "Relevance: 0 of 39 candidates kept",
+      "Contacts: 0 websites with public contacts",
+      "Duplicates: 0 merged"
+    ],
+    "parsed_query": {
+      "is_prospect_query": true,
+      "interest": "Startups",
+      "audience": "Startup founders",
+      "location": {
+        "city": "London",
+        "country": "UK",
+        "country_code": "GB"
+      },
+      "target_type": "both",
+      "related_terms": [
+        "entrepreneurs",
+        "co-founders",
+        "startup owners",
+        "business founders"
+      ]
+    }
+  }
+}

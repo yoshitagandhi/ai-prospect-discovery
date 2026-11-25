@@ -1,0 +1,45 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "http://127.0.0.1:4000/prospect-discovery?include_evidence=true",
+    "body": {
+      "query": "Cricket lovers in Ahmedabad India"
+    }
+  },
+  "status_code": 200,
+  "duration_seconds": 19.09,
+  "response": {
+    "success": true,
+    "query": "Cricket lovers in Ahmedabad India",
+    "total_prospects": 0,
+    "prospects": [],
+    "warnings": [
+      "Relevance: LLM judged only 4 of 27 candidates",
+      "LinkedIn: 10 candidate profiles found",
+      "X: 7 candidate profiles found",
+      "YouTube: 10 candidate profiles found",
+      "Websites: 0 business sites found, 0 kept by relevance",
+      "Relevance: 0 of 27 candidates kept",
+      "Contacts: 0 websites with public contacts",
+      "Duplicates: 0 merged"
+    ],
+    "parsed_query": {
+      "is_prospect_query": true,
+      "interest": "Cricket",
+      "audience": "Cricket lovers",
+      "location": {
+        "city": "Ahmedabad",
+        "country": "India",
+        "country_code": "IN"
+      },
+      "target_type": "individual",
+      "related_terms": [
+        "cricket fans",
+        "IPL",
+        "BCCI",
+        "test cricket",
+        "t20"
+      ]
+    }
+  }
+}

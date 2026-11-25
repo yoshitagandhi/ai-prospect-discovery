@@ -1,0 +1,352 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "http://127.0.0.1:4000/prospect-discovery?include_evidence=true",
+    "body": {
+      "query": "Digital marketing agency owners in New York USA"
+    }
+  },
+  "status_code": 200,
+  "duration_seconds": 19.88,
+  "response": {
+    "success": true,
+    "query": "Digital marketing agency owners in New York USA",
+    "total_prospects": 17,
+    "prospects": [
+      {
+        "name": "Sue Bookhout",
+        "location": "New York, USA",
+        "social_link": [
+          {
+            "platform": "LinkedIn",
+            "link": "https://www.linkedin.com/in/suebookhout"
+          }
+        ],
+        "evidence": [
+          "Digital Marketing Agency Owner",
+          "Cazenovia, New York, United States"
+        ],
+        "source_urls": [
+          "https://www.linkedin.com/in/suebookhout"
+        ],
+        "relevance_score": 1.0
+      },
+      {
+        "name": "Kiki Von Glinow",
+        "location": "New York, USA",
+        "social_link": [
+          {
+            "platform": "LinkedIn",
+            "link": "https://www.linkedin.com/in/kiki-von-glinow-09811b17"
+          }
+        ],
+        "evidence": [
+          "digital marketing agency",
+          "Brooklyn, New York, United States"
+        ],
+        "source_urls": [
+          "https://www.linkedin.com/in/kiki-von-glinow-09811b17"
+        ],
+        "relevance_score": 1.0
+      },
+      {
+        "name": "Talia Brits",
+        "location": "New York, USA",
+        "social_link": [
+          {
+            "platform": "LinkedIn",
+            "link": "https://www.linkedin.com/in/taliabrits"
+          }
+        ],
+        "evidence": [
+          "Digital Media",
+          "New York"
+        ],
+        "source_urls": [
+          "https://www.linkedin.com/in/taliabrits"
+        ],
+        "relevance_score": 1.0
+      },
+      {
+        "name": "Eric Lituchy",
+        "location": "New York, USA",
+        "social_link": [
+          {
+            "platform": "LinkedIn",
+            "link": "https://www.linkedin.com/in/ericlituchy"
+          }
+        ],
+        "evidence": [
+          "Digital Marketing Leader",
+          "New York, New York, United States"
+        ],
+        "source_urls": [
+          "https://www.linkedin.com/in/ericlituchy"
+        ],
+        "relevance_score": 1.0
+      },
+      {
+        "name": "Digital Marketing Agency USA SEO Company, SEM, and affordable PPC ...",
+        "location": "New York, USA",
+        "social_link": [
+          {
+            "platform": "LinkedIn",
+            "link": "https://www.linkedin.com/company/digitalmarketingagencyusa"
+          }
+        ],
+        "evidence": [
+          "Digital Marketing Agency",
+          "New York, new york, United States"
+        ],
+        "source_urls": [
+          "https://www.linkedin.com/company/digitalmarketingagencyusa"
+        ],
+        "relevance_score": 1.0
+      },
+      {
+        "name": "Clickmen Digital Marketing Agency",
+        "location": "New York, USA",
+        "social_link": [
+          {
+            "platform": "Facebook",
+            "link": "https://www.facebook.com/clickmen.us"
+          }
+        ],
+        "evidence": [
+          "Digital Marketing Agency",
+          "New York, NY, United States, New York"
+        ],
+        "source_urls": [
+          "https://www.facebook.com/Clickmen.us"
+        ],
+        "relevance_score": 1.0
+      },
+      {
+        "name": "udmideas",
+        "location": "New York, USA",
+        "social_link": [
+          {
+            "platform": "X",
+            "link": "https://x.com/udmideas"
+          }
+        ],
+        "evidence": [
+          "Digital Marketing Agency USA",
+          "New York"
+        ],
+        "source_urls": [
+          "https://x.com/udmideas"
+        ],
+        "relevance_score": 1.0
+      },
+      {
+        "name": "Amsive",
+        "location": "New York, USA",
+        "social_link": [
+          {
+            "platform": "X",
+            "link": "https://x.com/amsiveagency"
+          }
+        ],
+        "evidence": [
+          "performance marketing agency",
+          "New York, NY"
+        ],
+        "source_urls": [
+          "https://x.com/amsiveagency"
+        ],
+        "relevance_score": 1.0
+      },
+      {
+        "name": "Break The Web",
+        "location": "New York, USA",
+        "social_link": [
+          {
+            "platform": "X",
+            "link": "https://x.com/breaktheweb"
+          }
+        ],
+        "evidence": [
+          "Digital Marketing Agency",
+          "New York, NY"
+        ],
+        "source_urls": [
+          "https://x.com/breaktheweb"
+        ],
+        "relevance_score": 1.0
+      },
+      {
+        "name": "Phil Frost",
+        "location": "New York, USA",
+        "social_link": [
+          {
+            "platform": "X",
+            "link": "https://x.com/pcfrost"
+          }
+        ],
+        "evidence": [
+          "online marketing simple for small business owners",
+          "New York, NY"
+        ],
+        "source_urls": [
+          "https://x.com/pcfrost"
+        ],
+        "relevance_score": 1.0
+      },
+      {
+        "name": "CompleteConnection",
+        "location": "New York, USA",
+        "social_link": [
+          {
+            "platform": "X",
+            "link": "https://x.com/compltconection"
+          }
+        ],
+        "evidence": [
+          "digital marketing",
+          "New York, USA"
+        ],
+        "source_urls": [
+          "https://x.com/compltconection"
+        ],
+        "relevance_score": 1.0
+      },
+      {
+        "name": "Major Tom",
+        "location": "New York, USA",
+        "social_link": [
+          {
+            "platform": "YouTube",
+            "link": "https://www.youtube.com/@majortomagency"
+          }
+        ],
+        "evidence": [
+          "digital marketing",
+          "New York"
+        ],
+        "source_urls": [
+          "https://www.youtube.com/@majortomagency"
+        ],
+        "relevance_score": 1.0
+      },
+      {
+        "name": "Artenon",
+        "location": "New York, USA",
+        "social_link": [
+          {
+            "platform": "YouTube",
+            "link": "https://www.youtube.com/@artenon-content"
+          }
+        ],
+        "evidence": [
+          "digital marketing agency",
+          "New York based"
+        ],
+        "source_urls": [
+          "https://www.youtube.com/@artenon-content"
+        ],
+        "relevance_score": 1.0
+      },
+      {
+        "name": "CoverClick",
+        "location": "New York, USA",
+        "social_link": [
+          {
+            "platform": "YouTube",
+            "link": "https://www.youtube.com/@coverclick"
+          }
+        ],
+        "evidence": [
+          "digital marketing agency",
+          "New York, NY 10017"
+        ],
+        "source_urls": [
+          "https://www.youtube.com/@coverclick"
+        ],
+        "relevance_score": 1.0
+      },
+      {
+        "name": "Turn It Orange",
+        "location": "New York, USA",
+        "social_link": [
+          {
+            "platform": "YouTube",
+            "link": "https://www.youtube.com/@turnitorange9060"
+          }
+        ],
+        "evidence": [
+          "digital marketing and creative agency",
+          "New York City"
+        ],
+        "source_urls": [
+          "https://www.youtube.com/@turnitorange9060"
+        ],
+        "relevance_score": 1.0
+      },
+      {
+        "name": "Getplus Mindset",
+        "location": "New York, USA",
+        "social_link": [
+          {
+            "platform": "YouTube",
+            "link": "https://www.youtube.com/@getplusmindset"
+          }
+        ],
+        "evidence": [
+          "digital marketing specialist",
+          "New York"
+        ],
+        "source_urls": [
+          "https://www.youtube.com/@getplusmindset"
+        ],
+        "relevance_score": 1.0
+      },
+      {
+        "name": "MSM Digital",
+        "location": "New York, USA",
+        "social_link": [
+          {
+            "platform": "YouTube",
+            "link": "https://www.youtube.com/@wearemsmdigital"
+          }
+        ],
+        "evidence": [
+          "Digital Marketing agency",
+          "New York"
+        ],
+        "source_urls": [
+          "https://www.youtube.com/@wearemsmdigital"
+        ],
+        "relevance_score": 1.0
+      }
+    ],
+    "warnings": [
+      "Facebook: 2 candidate profiles found",
+      "Instagram: 4 candidate profiles found",
+      "LinkedIn: 9 candidate profiles found",
+      "Threads: 2 candidate profiles found",
+      "X: 10 candidate profiles found",
+      "YouTube: 10 candidate profiles found",
+      "Websites: 10 business sites found, 0 kept by relevance",
+      "Relevance: 17 of 46 candidates kept",
+      "Contacts: 0 websites with public contacts",
+      "Duplicates: 0 merged"
+    ],
+    "parsed_query": {
+      "is_prospect_query": true,
+      "interest": "Digital marketing",
+      "audience": "agency owners",
+      "location": {
+        "city": "New York",
+        "country": "USA",
+        "country_code": "US"
+      },
+      "target_type": "both",
+      "related_terms": [
+        "digital marketing agency",
+        "marketing agency",
+        "SEO agency"
+      ]
+    }
+  }
+}
