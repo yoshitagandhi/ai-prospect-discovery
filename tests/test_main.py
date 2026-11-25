@@ -8,9 +8,10 @@ from app.config import ConfigError
 from app.main import app
 from app.schemas import Location, ParsedQuery
 from app.services import prospect_service, query_service, search_service
-from app.services.prospect_service import DiscoveryResult
+from app.services.prospect_service import DeadlineExceededError, DiscoveryResult
 from app.services.query_service import QueryNotProspectError, QueryUnderstandingError
 from app.services.relevance_service import RelevanceUnavailableError
+from app.services.search_service import SearchUnavailableError
 from app.utils.rate_limit import reset_rate_limits
 
 ENDPOINT = "/prospect-discovery"
@@ -234,3 +235,43 @@ def test_relevance_unavailable_returns_503_without_results(client, monkeypatch):
         "success": False,
         "error": "Prospect checking is temporarily unavailable, please try again later",
     }
+
+
+@pytest.mark.parametrize(
+    ("error", "message"),
+    [
+        (
+            SearchUnavailableError(
+                "LinkedIn unavailable: search API returned HTTP 432"
+            ),
+            "Search is temporarily unavailable, please try again later",
+        ),
+        (
+            DeadlineExceededError("request deadline reached"),
+            "The search took too long, please try again later",
+        ),
+    ],
+)
+def test_outages_return_503_not_an_empty_success(client, monkeypatch, error, message):
+    async def failing(query, include_evidence=False):
+        raise error
+
+    monkeypatch.setattr(prospect_service, "find_prospects", failing)
+    response = client.post(ENDPOINT, json={"query": "chess players"})
+    assert response.status_code == 503
+    assert response.json() == {"success": False, "error": message}
+    assert "HTTP 432" not in response.text
+
+
+def test_daily_limit_protects_the_free_search_credits(fake_keys, monkeypatch):
+    monkeypatch.setenv("DAILY_REQUEST_LIMIT", "2")
+    config.get_settings.cache_clear()
+    reset_rate_limits()
+    with TestClient(app, raise_server_exceptions=False) as test_client:
+        responses = [
+            test_client.post(ENDPOINT, json={"query": "chess players"})
+            for _ in range(3)
+        ]
+    reset_rate_limits()
+    assert [r.status_code for r in responses] == [200, 200, 429]
+    assert int(responses[2].headers["retry-after"]) > 3600

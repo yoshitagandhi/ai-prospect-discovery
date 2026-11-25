@@ -155,7 +155,8 @@ found) and `parsed_query`. The default response follows the spec shape exactly.
 **Errors** always return `{"success": false, "error": "..."}` without stack traces:
 422 (invalid input, or a query that does not ask for people or businesses), 413/411
 (body too large or missing length), 429 (rate limit, with `Retry-After`), 503 (no LLM
-provider available; the service then returns no results rather than guessed ones) and
+provider available, every search source down, or the request took longer than 60
+seconds; the service then returns no results rather than guessed or empty ones) and
 500 (unexpected error, logged).
 
 
@@ -290,7 +291,8 @@ Cost and quota optimisations already built in
   Pydantic still enforces every limit on the reply.
 * Only one retry, only on Gemini 503; quota errors are never retried.
 * Social pages are never fetched; at most 10 websites per request, 5 at a time.
-* Per-IP and global rate limits protect the paid APIs on the public demo.
+* Per-IP, global per-minute and global daily limits protect the free quotas on the
+  public demo.
 
 
 Security
@@ -310,7 +312,10 @@ Security
   rejected, extra fields forbidden.
 * **Regex safety:** emails are found by splitting words, then a bounded full match, then
   email-validator; phones use the phonenumbers matcher. No pattern can backtrack badly.
-* **Abuse:** 5 requests per minute per IP and 30 per minute in total.
+* **Abuse:** 5 requests per minute per IP, 30 per minute in total and 150 per day in
+  total. Each request uses about 6 Tavily credits, so the daily cap keeps the free
+  1,000 monthly credits from being used up in minutes.
+* **Time limit:** a whole request stops after 60 seconds (`request_deadline_seconds`).
 * **Errors:** clear message and status code; no stack traces, paths or keys.
 * **Personal data:** nothing is stored except the parsed-query cache (one hour); search
   results are not cached.

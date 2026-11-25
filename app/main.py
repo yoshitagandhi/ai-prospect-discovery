@@ -17,11 +17,14 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from app.config import get_settings
 from app.schemas import ErrorResponse, ProspectRequest, ProspectResponse
 from app.services import prospect_service
+from app.services.prospect_service import DeadlineExceededError
 from app.services.query_service import QueryNotProspectError, QueryUnderstandingError
 from app.services.relevance_service import RelevanceUnavailableError
+from app.services.search_service import SearchUnavailableError
 from app.utils.rate_limit import check_rate_limit
 
 MAX_BODY_BYTES = 10_000
+SECONDS_PER_DAY = 86_400
 MAX_ERROR_REASONS = 3
 METHODS_WITH_BODY = {"POST", "PUT", "PATCH"}
 HTTP_ERROR_MESSAGES = {
@@ -97,16 +100,21 @@ async def handle_unexpected_error(request: Request, exc: Exception) -> JSONRespo
 
 
 def enforce_rate_limits(request: Request) -> None:
-    """Apply the per-IP limit, then the global limit across all visitors.
+    """Apply the per-IP limit, then the global per-minute limit, then the daily limit.
 
-    The global limit protects the free API quotas even if a visitor fakes their IP
-    through the X-Forwarded-For header.
+    The global limits protect the free API quotas even if a visitor fakes their IP
+    through the X-Forwarded-For header. The daily limit (about 6 Tavily credits per
+    request) keeps the free 1,000 monthly credits from being used up in minutes.
     """
     settings = get_settings()
     client_ip = request.client.host if request.client else "unknown"
     wait_seconds = check_rate_limit("ip:" + client_ip, settings.rate_limit_per_minute)
     if wait_seconds is None:
         wait_seconds = check_rate_limit("global", settings.global_rate_limit_per_minute)
+    if wait_seconds is None:
+        wait_seconds = check_rate_limit(
+            "daily", settings.daily_request_limit, window_seconds=SECONDS_PER_DAY
+        )
     if wait_seconds is not None:
         raise HTTPException(status_code=429, headers={"Retry-After": str(wait_seconds)})
 
@@ -134,6 +142,23 @@ async def handle_relevance_unavailable(
     return error_response(
         503, "Prospect checking is temporarily unavailable, please try again later"
     )
+
+
+async def handle_search_unavailable(
+    request: Request, exc: SearchUnavailableError
+) -> JSONResponse:
+    """503 when every search source failed; the reasons are logged, not returned."""
+    logger.warning("All discovery sources failed: %s", exc)
+    return error_response(
+        503, "Search is temporarily unavailable, please try again later"
+    )
+
+
+async def handle_deadline_exceeded(
+    request: Request, exc: DeadlineExceededError
+) -> JSONResponse:
+    """503 when the whole request took longer than request_deadline_seconds."""
+    return error_response(503, "The search took too long, please try again later")
 
 
 @asynccontextmanager
@@ -167,6 +192,8 @@ app = FastAPI(
         QueryNotProspectError: handle_not_prospect_query,
         QueryUnderstandingError: handle_query_understanding_error,
         RelevanceUnavailableError: handle_relevance_unavailable,
+        SearchUnavailableError: handle_search_unavailable,
+        DeadlineExceededError: handle_deadline_exceeded,
         Exception: handle_unexpected_error,
     },
 )

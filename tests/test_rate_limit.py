@@ -47,3 +47,13 @@ def test_idle_keys_are_forgotten(monkeypatch):
         check_rate_limit("ip:" + name, limit=5, now=0.0)
     check_rate_limit("ip:new", limit=5, now=1000.0)
     assert set(rate_limit._request_times) == {"ip:new"}
+
+
+def test_cleanup_uses_each_keys_own_window(monkeypatch):
+    monkeypatch.setattr(rate_limit, "MAX_TRACKED_KEYS", 2)
+    check_rate_limit("daily", limit=1, window_seconds=86_400, now=0.0)
+    check_rate_limit("ip:a", limit=5, now=0.0)
+    check_rate_limit("ip:b", limit=5, now=120.0)
+    assert (
+        check_rate_limit("daily", limit=1, window_seconds=86_400, now=130.0) == 86_270
+    )

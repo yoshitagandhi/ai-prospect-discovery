@@ -14,6 +14,7 @@ In evidence mode each prospect also carries its verified quotes, source URLs and
 relevance score, and the warnings list reports what each step found.
 """
 
+import asyncio
 from collections import Counter
 
 import httpx
@@ -79,12 +80,28 @@ def build_prospect(
     )
 
 
-async def find_prospects(query: str, include_evidence: bool = False) -> DiscoveryResult:
-    """Run the pipeline for an already validated query.
+class DeadlineExceededError(Exception):
+    """The whole pipeline took longer than request_deadline_seconds."""
 
-    Raises query_service.QueryNotProspectError or QueryUnderstandingError, which the
-    API turns into 422 and 503 responses.
+
+async def find_prospects(query: str, include_evidence: bool = False) -> DiscoveryResult:
+    """Run the pipeline for an already validated query, within the request deadline.
+
+    Raises DeadlineExceededError when the deadline is reached, and lets the pipeline's
+    own errors through (QueryNotProspectError, QueryUnderstandingError,
+    SearchUnavailableError, RelevanceUnavailableError); the API turns them into
+    422 and 503 responses.
     """
+    settings = get_settings()
+    try:
+        async with asyncio.timeout(settings.request_deadline_seconds):
+            return await _run_pipeline(query, include_evidence)
+    except TimeoutError as error:
+        raise DeadlineExceededError("request deadline reached") from error
+
+
+async def _run_pipeline(query: str, include_evidence: bool) -> DiscoveryResult:
+    """Parse, discover, check relevance, read websites, merge and cap."""
     settings = get_settings()
     parsed_query, usage = await query_service.parse_query(query)
     result = DiscoveryResult(parsed_query=parsed_query)

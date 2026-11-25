@@ -15,6 +15,7 @@ from app.services import (
     search_service,
 )
 from app.services.profile_extractor import SiteContacts
+from app.services.prospect_service import DeadlineExceededError
 from app.services.relevance_service import RelevanceResult, ScoredCandidate
 from app.services.search_service import Candidate, SearchOutcome
 
@@ -232,3 +233,16 @@ def test_website_linking_a_kept_profile_is_merged_into_one_prospect(monkeypatch)
     assert [p.name for p in result.prospects] == ["Bright Bistro"]
     assert result.prospects[0].social_link == [profile_link, email_link]
     assert "Duplicates: 1 merged" in result.warnings
+
+
+def test_slow_pipeline_stops_at_the_request_deadline(monkeypatch):
+    monkeypatch.setenv("REQUEST_DEADLINE_SECONDS", "0.05")
+    config.get_settings.cache_clear()
+
+    async def slow_discover(client, settings, parsed):
+        await asyncio.sleep(5)
+        return SearchOutcome()
+
+    monkeypatch.setattr(search_service, "discover", slow_discover)
+    with pytest.raises(DeadlineExceededError):
+        asyncio.run(prospect_service.find_prospects("chess coaches"))

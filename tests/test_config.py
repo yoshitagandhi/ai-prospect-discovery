@@ -29,6 +29,8 @@ def test_defaults_applied_when_only_required_keys_set(monkeypatch):
     set_required_keys(monkeypatch)
     settings = load_settings(env_file=None)
     assert settings.max_prospects == 25
+    assert settings.request_deadline_seconds == 60.0
+    assert settings.daily_request_limit == 150
     assert settings.http_timeout_seconds == 10.0
     assert settings.global_rate_limit_per_minute == 30
     assert settings.llm_timeout_seconds == 20.0

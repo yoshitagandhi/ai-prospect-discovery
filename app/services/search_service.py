@@ -7,8 +7,10 @@ API. For business-type queries one extra search finds business websites, which a
 read for public emails, phones and WhatsApp links.
 
 A failing platform becomes a warning; the request still succeeds with the others.
-Only expected failures (SearchError, YouTubeError) are turned into warnings: anything
-else is a bug and is raised.
+If every source fails (for example the Tavily key is wrong or its credits are used up),
+SearchUnavailableError is raised so the API answers 503 instead of an empty success.
+Only expected failures (SearchError, YouTubeError) are handled this way: anything else
+is a bug and is raised.
 """
 
 import asyncio
@@ -57,6 +59,10 @@ class Candidate(BaseModel):
     source_url: str
     location_hint: str | None = None
     found_via: Literal["web_search", "youtube_api"]
+
+
+class SearchUnavailableError(Exception):
+    """Every discovery source failed, so an empty result would be misleading."""
 
 
 class SearchOutcome(BaseModel):
@@ -185,4 +191,6 @@ async def discover(
             outcome.websites = result
         else:
             outcome.candidates.extend(result)
+    if len(outcome.warnings) == len(jobs):
+        raise SearchUnavailableError("; ".join(outcome.warnings))
     return outcome

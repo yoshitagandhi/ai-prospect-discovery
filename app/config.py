@@ -45,7 +45,7 @@ class Settings(BaseModel):
 
     http_timeout_seconds: float = Field(default=10.0, gt=0, le=60)
     llm_timeout_seconds: float = Field(default=20.0, gt=0, le=60)
-    request_deadline_seconds: float = Field(default=45.0, gt=0, le=120)
+    request_deadline_seconds: float = Field(default=60.0, gt=0, le=120)
     max_response_bytes: int = Field(default=1_000_000, ge=10_000, le=5_000_000)
     max_redirects: int = Field(default=3, ge=0, le=5)
 
@@ -55,6 +55,7 @@ class Settings(BaseModel):
 
     rate_limit_per_minute: int = Field(default=5, ge=1, le=60)
     global_rate_limit_per_minute: int = Field(default=30, ge=1, le=600)
+    daily_request_limit: int = Field(default=150, ge=1, le=10_000)
     cache_ttl_seconds: int = Field(default=3600, ge=0, le=86_400)
 
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"

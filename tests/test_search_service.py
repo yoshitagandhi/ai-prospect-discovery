@@ -10,7 +10,11 @@ from app.platforms.web_search import SearchError, SearchResult
 from app.platforms.youtube import YouTubeChannel, YouTubeError
 from app.schemas import ParsedQuery
 from app.services import search_service
-from app.services.search_service import build_search_text, discover
+from app.services.search_service import (
+    SearchUnavailableError,
+    build_search_text,
+    discover,
+)
 
 SETTINGS = Settings(
     tavily_api_key="tvly-test-not-a-real-key",
@@ -200,3 +204,18 @@ def test_unexpected_errors_are_not_hidden(fake_sources, monkeypatch):
 
 def test_search_service_uses_the_shared_platform_registry():
     assert search_service.SEARCH_PLATFORMS[0].NAME == "LinkedIn"
+
+
+def test_all_sources_failing_raises_instead_of_an_empty_success(
+    fake_sources, monkeypatch
+):
+    async def tavily_down(client, settings, query, **kwargs):
+        raise SearchError("search API returned HTTP 432")
+
+    async def no_youtube(client, settings, query, country_code):
+        raise YouTubeError("no API key configured")
+
+    monkeypatch.setattr(web_search, "search_web", tavily_down)
+    monkeypatch.setattr(youtube, "find_channels", no_youtube)
+    with pytest.raises(SearchUnavailableError, match="HTTP 432"):
+        run_discover(parsed(target_type="business"))

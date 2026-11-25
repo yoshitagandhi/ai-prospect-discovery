@@ -1,8 +1,8 @@
 """In-memory sliding-window rate limiting for the public demo.
 
-Each key (one per client IP, plus one shared "global" key) remembers the times of its
-requests in the last window. A request is allowed while fewer than `limit` requests
-were made in that window.
+Each key (one per client IP, a shared per-minute "global" key and a shared "daily"
+key) remembers the times of its requests in its own window. A request is allowed while
+fewer than `limit` requests were made in that window.
 
 Known limits (documented in the README): the counts live in memory, so they reset when
 the server restarts and assume a single server process, which is how the free Render
@@ -16,6 +16,7 @@ from collections import deque
 MAX_TRACKED_KEYS = 10_000
 
 _request_times: dict[str, deque[float]] = {}
+_windows: dict[str, float] = {}
 
 
 def _drop_expired(times: deque[float], now: float, window_seconds: float) -> None:
@@ -24,12 +25,17 @@ def _drop_expired(times: deque[float], now: float, window_seconds: float) -> Non
         times.popleft()
 
 
-def _forget_idle_keys(now: float, window_seconds: float) -> None:
-    """Delete keys with no recent requests so memory cannot grow without limit."""
+def _forget_idle_keys(now: float) -> None:
+    """Delete keys with no recent requests so memory cannot grow without limit.
+
+    Each key is checked against its own window, so a flood of new per-minute keys can
+    never erase the history of the daily key.
+    """
     for key in list(_request_times):
-        _drop_expired(_request_times[key], now, window_seconds)
+        _drop_expired(_request_times[key], now, _windows[key])
         if not _request_times[key]:
             del _request_times[key]
+            del _windows[key]
 
 
 def check_rate_limit(
@@ -42,9 +48,10 @@ def check_rate_limit(
     """
     current_time = time.monotonic() if now is None else now
     if len(_request_times) >= MAX_TRACKED_KEYS:
-        _forget_idle_keys(current_time, window_seconds)
+        _forget_idle_keys(current_time)
 
     times = _request_times.setdefault(key, deque())
+    _windows[key] = window_seconds
     _drop_expired(times, current_time, window_seconds)
     if len(times) >= limit:
         seconds_left = window_seconds - (current_time - times[0])
@@ -56,3 +63,4 @@ def check_rate_limit(
 def reset_rate_limits() -> None:
     """Forget every recorded request. Used by tests."""
     _request_times.clear()
+    _windows.clear()
