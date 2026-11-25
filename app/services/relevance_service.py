@@ -4,7 +4,8 @@
    text cut to MAX_EVIDENCE_CHARS) and returns booleans plus exact quotes.
 2. Deterministic checks never trust the model: a quote counts only if it really appears
    in that candidate's name or evidence AND shares a word with what it should prove
-   (the interest and related terms, or the requested place). For a country-level query
+   (the interest and related terms, or the most specific place the query names: the
+   city if there is one, else the state, else the country). For a country-level query
    only, a YouTube channel's own country equal to the query's country code also
    verifies the location (a country is too coarse to prove a city or state).
    The interest quote must come from the evidence text, not only from the name:
@@ -145,9 +146,18 @@ def interest_words(parsed: ParsedQuery) -> set[str]:
 
 
 def location_words(parsed: ParsedQuery) -> set[str]:
-    """Words that can prove the place: city, state, country and country code."""
+    """Words that can prove the place: only the most specific place the query names.
+
+    A city query needs the city, a state query the state, and only a country query
+    accepts the country or its code. So "India" alone never proves "Ahmedabad".
+    """
     location = parsed.location
-    parts = [location.city, location.state, location.country, location.country_code]
+    if location.city:
+        parts = [location.city]
+    elif location.state:
+        parts = [location.state]
+    else:
+        parts = [location.country, location.country_code]
     return content_words(" ".join(part for part in parts if part))
 
 

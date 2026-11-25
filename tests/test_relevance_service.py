@@ -292,3 +292,16 @@ def test_llm_unavailable_raises_instead_of_guessing(monkeypatch):
     fake_llm(monkeypatch, error=LlmError("down"))
     with pytest.raises(RelevanceUnavailableError):
         run(parsed(**SPRINGFIELD), [JANE])
+
+
+def test_country_alone_does_not_prove_a_city(monkeypatch):
+    elsewhere = candidate("Sam Lee", "Sam Lee, chess coach in Shelbyville, USA.")
+    fake_llm(monkeypatch, [judgement(0, location_quote="USA")])
+    assert run(parsed(**SPRINGFIELD), [elsewhere]).kept == []
+
+
+def test_country_proves_a_country_query(monkeypatch):
+    sam = candidate("Sam Lee", "Sam Lee, chess coach in the USA.")
+    fake_llm(monkeypatch, [judgement(0, location_quote="USA")])
+    query = parsed(country="USA", country_code="US")
+    assert [item.candidate.name for item in run(query, [sam]).kept] == ["Sam Lee"]

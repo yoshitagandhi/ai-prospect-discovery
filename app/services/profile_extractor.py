@@ -12,13 +12,15 @@ request and MAX_CONCURRENT_FETCHES at a time. For each one:
 A site that is blocked, unsafe, too large or failing is skipped with a warning; a site
 with no valid contact or profile link is skipped too. Values are never guessed.
 
-A page that links more than one profile on the same platform (for example two
-LinkedIn profiles) is treated as a list or event page and skipped: its links cannot
-be trusted to belong to one prospect. A real business that links both a personal and
-a company profile is skipped too; that is the safer mistake.
+A page that looks like a list of several businesses is skipped, because its contacts
+cannot be trusted to belong to one prospect: more than one profile on the same social
+platform (for example two LinkedIn profiles), or more than MAX_DIRECT_CONTACTS emails,
+phone numbers or WhatsApp numbers. A real business with a personal and a company
+profile, or with many branch numbers, is skipped too; that is the safer mistake.
 """
 
 import asyncio
+from collections import Counter
 from urllib.parse import urljoin, urlsplit
 
 import httpx
@@ -48,6 +50,7 @@ MAX_LINKS = 20
 PROFILE_MODULES = (*SEARCH_PLATFORMS, youtube)
 HIDDEN_TAGS = ("script", "style", "noscript", "template")
 DIRECT_CONTACT_PLATFORMS = {"Email", "Phone", "WhatsApp"}
+MAX_DIRECT_CONTACTS = 3
 
 
 class SiteContacts(BaseModel):
@@ -127,11 +130,16 @@ def parse_contacts(
 
 
 def looks_like_list_page(links: list[SocialLink]) -> bool:
-    """True if the page links more than one profile on the same social platform."""
-    platforms = [
-        link.platform for link in links if link.platform not in DIRECT_CONTACT_PLATFORMS
-    ]
-    return len(platforms) != len(set(platforms))
+    """True if the links look like they belong to several businesses.
+
+    That is: more than one profile on the same social platform, or more than
+    MAX_DIRECT_CONTACTS emails, phones or WhatsApp numbers.
+    """
+    for platform, count in Counter(link.platform for link in links).items():
+        limit = MAX_DIRECT_CONTACTS if platform in DIRECT_CONTACT_PLATFORMS else 1
+        if count > limit:
+            return True
+    return False
 
 
 async def _read_site(
@@ -181,7 +189,7 @@ async def extract_contacts(
             warnings.append(f"Website {host}: no public contact details found")
         elif looks_like_list_page(result.links):
             warnings.append(
-                f"Website {host} skipped: links several profiles on one platform"
+                f"Website {host} skipped: looks like a list of several businesses"
             )
         else:
             sites.append(result)

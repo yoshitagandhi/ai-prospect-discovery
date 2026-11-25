@@ -10,6 +10,7 @@ from app.platforms.web_search import SearchResult
 from app.schemas import SocialLink
 from app.services import profile_extractor
 from app.services.profile_extractor import (
+    MAX_DIRECT_CONTACTS,
     extract_contacts,
     looks_like_list_page,
     parse_contacts,
@@ -197,7 +198,7 @@ def test_list_pages_are_skipped(fake_web):
     sites, warnings = run_extract(["https://list.example/"])
     assert sites == []
     assert warnings == [
-        "Website list.example skipped: links several profiles on one platform"
+        "Website list.example skipped: looks like a list of several businesses"
     ]
 
 
@@ -211,3 +212,12 @@ def test_one_profile_per_platform_plus_contacts_is_not_a_list():
     assert looks_like_list_page(links) is False
     second = SocialLink(platform="X", link="https://x.com/other")
     assert looks_like_list_page([*links, second]) is True
+
+
+def test_many_phone_numbers_mean_a_directory_page():
+    phones = [
+        SocialLink(platform="Phone", link=f"tel:+9714359999{digit}")
+        for digit in range(MAX_DIRECT_CONTACTS + 1)
+    ]
+    assert looks_like_list_page(phones[:MAX_DIRECT_CONTACTS]) is False
+    assert looks_like_list_page(phones) is True
