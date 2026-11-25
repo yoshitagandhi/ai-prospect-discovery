@@ -36,6 +36,8 @@ def test_names_cleaned_from_titles(title, expected):
         "Instagram",
         "Log In | Facebook",
         "12345 - 678",
+        "Contact Us",
+        "About",
         "x" * 150,
         "\u2728\U0001f451",
     ],

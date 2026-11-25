@@ -13,6 +13,10 @@ correct prospects are returned rather than many weak ones.
 Built for the chivoxai practical test
 ([spec](https://github.com/chivoxai/practical-test/blob/main/ai-prospect-discovery.md)).
 
+**Live demo:** https://ai-prospect-discovery-pl6l.onrender.com/docs
+(free instance: the first request after 15 idle minutes takes about a minute to wake
+up; limited to 5 requests per minute per visitor and 150 per day in total).
+
 
 How it works
 ------------
@@ -380,8 +384,24 @@ Incidents during development (all real)
 Deployment
 ----------
 
-Live demo: *to be added*.
+Live on Render (free tier, Oregon):
 
-Planned for Render (free tier): build `pip install -r requirements.txt`, start
-`uvicorn app.main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips="*"`,
-keys set as environment variables in the Render dashboard.
+* API docs: https://ai-prospect-discovery-pl6l.onrender.com/docs
+* Health: https://ai-prospect-discovery-pl6l.onrender.com/health
+
+Settings used:
+
+* Build command: `pip install -r requirements.txt`
+* Start command:
+  `uvicorn app.main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips="*"`
+* Health check path: `/health`
+* Keys: set as environment variables in the Render dashboard, never in the repository.
+* Python: 3.14, from `.python-version`.
+
+`--proxy-headers` lets the per-IP limit see the visitor's address behind Render's
+proxy. A visitor can fake that header, which is why the global per-minute and daily
+limits exist as well.
+
+Checked after deployment (26 Nov 2026): `/health` returned `ok`, `/docs` loaded, and
+"Restaurant owners in Dubai UAE" returned 5 prospects, including a restaurant whose
+public email, phone and WhatsApp number were read from its own contact page.

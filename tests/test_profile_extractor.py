@@ -14,6 +14,7 @@ from app.services.profile_extractor import (
     extract_contacts,
     looks_like_list_page,
     parse_contacts,
+    site_name,
     website_candidate,
 )
 from app.utils import safe_http
@@ -102,7 +103,15 @@ def test_website_candidate_uses_cleaned_title():
     candidate = website_candidate(hit)
     assert candidate.name == "Bright Bistro"
     assert candidate.platform == "Website"
-    assert website_candidate(hit.model_copy(update={"title": "Home"})) is None
+    for generic in ("Home", "Contact", "Contact Us | "):
+        candidate = website_candidate(hit.model_copy(update={"title": generic}))
+        assert candidate.name == "brightbistro.example"
+
+
+def test_site_name_drops_www_and_path():
+    assert site_name("https://www.coyarestaurant.com/dubai/en/contact") == (
+        "coyarestaurant.com"
+    )
 
 
 @pytest.fixture

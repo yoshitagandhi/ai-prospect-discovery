@@ -21,6 +21,10 @@ TITLE_SEPARATORS = (
     " on Instagram",
 )
 GENERIC_NAMES = {
+    "about",
+    "about us",
+    "contact",
+    "contact us",
     "facebook",
     "home",
     "instagram",

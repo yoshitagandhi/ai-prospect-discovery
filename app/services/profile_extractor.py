@@ -61,9 +61,19 @@ class SiteContacts(BaseModel):
     links: list[SocialLink]
 
 
+def site_name(url: str) -> str | None:
+    """'https://www.coyarestaurant.com/dubai/contact' -> 'coyarestaurant.com'."""
+    host = urlsplit(url).hostname or ""
+    return host.removeprefix("www.") or None
+
+
 def website_candidate(result: SearchResult) -> Candidate | None:
-    """Turn a business-website search hit into a candidate for relevance scoring."""
-    name = clean_display_name(result.title)
+    """Turn a business-website search hit into a candidate for relevance scoring.
+
+    The name comes from the page title. When the title is only a generic word such as
+    "Contact" or "Home", the site's own domain is used as the name instead.
+    """
+    name = clean_display_name(result.title) or site_name(result.url)
     if name is None:
         return None
     return Candidate(
