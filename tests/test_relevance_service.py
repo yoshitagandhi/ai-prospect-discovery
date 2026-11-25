@@ -227,9 +227,16 @@ def test_score_is_lower_when_the_query_names_no_place(monkeypatch):
     assert run(parsed(), [JANE]).kept[0].score == 0.7
 
 
-def test_candidate_without_judgement_is_dropped(monkeypatch):
+def test_candidate_without_judgement_is_dropped_with_a_warning(monkeypatch):
     fake_llm(monkeypatch, [judgement(5)])
-    assert run(parsed(**SPRINGFIELD), [JANE]).kept == []
+    result = run(parsed(**SPRINGFIELD), [JANE])
+    assert result.kept == []
+    assert result.warnings == ["Relevance: LLM judged only 0 of 1 candidates"]
+
+
+def test_no_warning_when_every_candidate_is_judged(monkeypatch):
+    fake_llm(monkeypatch, [judgement(0)])
+    assert run(parsed(**SPRINGFIELD), [JANE]).warnings == []
 
 
 def test_only_max_candidates_sent_to_llm(monkeypatch):

@@ -111,9 +111,10 @@ class RelevanceUnavailableError(Exception):
 
 
 class RelevanceResult(BaseModel):
-    """Candidates that passed the keep rule (best first), plus the LLM usage."""
+    """Candidates that passed the keep rule (best first), warnings and the LLM usage."""
 
     kept: list[ScoredCandidate] = []
+    warnings: list[str] = []
     usage: LlmUsage | None = None
 
 
@@ -309,6 +310,10 @@ async def score_candidates(
                 candidate.name,
             )
 
+    if len(scored) < len(candidates):
+        result.warnings.append(
+            f"Relevance: LLM judged only {len(scored)} of {len(candidates)} candidates"
+        )
     kept = [item for item in scored if _keep(item, parsed)]
     kept.sort(key=lambda item: item.score, reverse=True)
     result.kept = kept
